@@ -10,6 +10,7 @@ set(libs micro-containers)
 
 set(SOURCES
         test_linear_memory.cpp
+        test_linked_list.cpp
         )
 
 set(SOURCES_SHARED "")
