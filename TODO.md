@@ -1,0 +1,6 @@
+- linked list
+- dictionary
+- hash-table
+- heap
+- priority queue
+- queue
