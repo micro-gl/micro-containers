@@ -48,7 +48,7 @@ configure_package_config_file(
         INSTALL_DESTINATION
         ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 # install cmake config files for targets of this lib, so they can be found more easily
-# without a custom find script, but with find_package(micro-containers CONFIG) command
+# without node custom find script, but with find_package(micro-containers CONFIG) command
 install(EXPORT ${PROJECT_NAME}_Targets
         FILE ${PROJECT_NAME}Targets.cmake
         NAMESPACE ${PROJECT_NAME}::

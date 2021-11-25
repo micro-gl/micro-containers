@@ -1,7 +1,11 @@
-- linked list
+- DONE: linked list
 - dictionary
 - hash-table
 - heap
 - priority queue
 - queue
 - set
+- stack
+- sort placement new thing
+- decide weather every class is stand alone
+- design some algorithms like for_each, range, etc...

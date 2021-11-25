@@ -10,31 +10,38 @@
 ========================================================================================*/
 #pragma once
 
+enum class micro { blah };
+
+#ifndef MICRO_CONTAINERS_SIZE_TYPE
+inline void* operator new (unsigned long n, void* ptr, enum micro) noexcept {
+    return ptr;
+}
+#else
+inline void* operator new (MICRO_CONTAINERS_SIZE n, void* ptr, enum micro) noexcept {
+    return ptr;
+}
+#endif
+
 namespace linked_list_traits {
 
     template< class T > struct remove_reference      {typedef T type;};
     template< class T > struct remove_reference<T&>  {typedef T type;};
     template< class T > struct remove_reference<T&&> {typedef T type;};
-
-    template <class _Tp>
-    inline typename remove_reference<_Tp>::type&&
-    move(_Tp&& __t) noexcept
-    {
+    template <class _Tp> inline typename remove_reference<_Tp>::type&&
+    move(_Tp&& __t) noexcept {
         typedef typename remove_reference<_Tp>::type _Up;
         return static_cast<_Up&&>(__t);
     }
-
     template <class _Tp> inline _Tp&&
-    forward(typename remove_reference<_Tp>::type& __t) noexcept
-    {
+    forward(typename remove_reference<_Tp>::type& __t) noexcept {
         return static_cast<_Tp&&>(__t);
     }
-
     template <class _Tp> inline _Tp&&
-    forward(typename remove_reference<_Tp>::type&& __t) noexcept
-    {
+    forward(typename remove_reference<_Tp>::type&& __t) noexcept {
         return static_cast<_Tp&&>(__t);
     }
+    template<bool, class _Tp = void> struct enable_if {};
+    template<class _Tp> struct enable_if<true, _Tp> { typedef _Tp type; };
 
     /**
      * standard allocator
@@ -70,7 +77,7 @@ namespace linked_list_traits {
 }
 
 /**
- * Minimal vector like container, does not obey all of the propagate syntax that
+ * Minimal Linked List like container, does not obey all of the propagate syntax that
  * Allocator Aware Container follows
  * @tparam T the type
  * @tparam Allocator the allocator type
@@ -89,12 +96,12 @@ public:
     using uint = unsigned int;
 
     struct node_t {
-        node_t()=delete;
+        node_t()=default;
         node_t(const value_type & $value) :
                     prev(nullptr), next(nullptr), value($value) {}
         node_t(value_type && $value) :
                 prev(nullptr), next(nullptr), value(linked_list_traits::move($value)) {}
-        template< class... Args >
+        template<class... Args>
         node_t(Args&&... args) : prev(nullptr), next(nullptr),
                     value(linked_list_traits::forward<Args>(args)...) {
 
@@ -108,7 +115,8 @@ public:
     struct iterator_t {
         node_t * _node;
 
-        iterator_t(const iterator_t & other) : _node(other._node) {}
+        template<class value_reference_type_t>
+        iterator_t(const iterator_t<value_reference_type_t> & other) : _node(other._node) {}
         explicit iterator_t(node_t * start) : _node(start) {}
         iterator_t& operator++() { _node=_node->next; return *this;}
         iterator_t& operator--() { _node=_node->prev; return *this;}
@@ -129,9 +137,11 @@ private:
     rebind_allocator_type _alloc;
     index _size = 0u;
 
+    void reset_sentinel() { _sentinel_node.prev = _sentinel_node.next = &_sentinel_node; }
+
 public:
     explicit linked_list(const Allocator & alloc = Allocator()) noexcept : _alloc{alloc} {
-        _sentinel_node.prev = _sentinel_node.next = &_sentinel_node;
+        reset_sentinel();
     }
 
     linked_list(const uint count, const T & value, const Allocator & alloc = Allocator()) :
@@ -160,17 +170,20 @@ public:
             linked_list(alloc) {
         const bool are_equal_allocators = alloc==other.get_allocator();
         if(are_equal_allocators) {
-            _sentinel_node = other._sentinel_node;
+            _sentinel_node.next = other._sentinel_node.next;
+            _sentinel_node.prev = other._sentinel_node.prev;
+            _sentinel_node.next->prev = &_sentinel_node;
+            _sentinel_node.prev->next = &_sentinel_node;
             _size = other._size;
-            other._sentinel_node.prev= other._sentinel_node.next=nullptr;
+            other.reset_sentinel();
             other._size = 0;
         } else
             for (const auto & item : other)
                 push_back(linked_list_traits::move(item));
     }
 
-    linked_list(linked_list && other) noexcept : linked_list{other, other.get_allocator()} {
-    }
+    linked_list(linked_list && other) noexcept :
+                linked_list{linked_list_traits::move(other), other.get_allocator()} {}
 
     ~linked_list() noexcept { clear(); }
 
@@ -193,9 +206,12 @@ public:
             // clear and destruct current elements
             clear();
             // move everything from other
-            _sentinel_node = other._sentinel_node;
+            _sentinel_node.next = other._sentinel_node.next;
+            _sentinel_node.prev = other._sentinel_node.prev;
+            _sentinel_node.next->prev = &_sentinel_node;
+            _sentinel_node.prev->next = &_sentinel_node;
             _size = other._size;
-            other._sentinel_node.prev= other._sentinel_node.next=nullptr;
+            other.reset_sentinel();
             other._size = 0;
         } else {
             for (const auto & item : other)
@@ -205,76 +221,77 @@ public:
         return (*this);
     }
 
+private:
     node_t * create_node(const value_type & value = value_type()) {
         node_t * node = _alloc.allocate(1);
-        new (node) node_t(value); // construct
+        ::new(node, micro::blah) node_t(value); // construct
         return node;
     }
 
     node_t * create_node(value_type && value) {
         node_t * node = _alloc.allocate(1);
-        new (node) node_t(linked_list_traits::move(value)); // construct
+        ::new(node, micro::blah) node_t(linked_list_traits::move(value)); // construct
         return node;
     }
 
     template<class... Args>
     node_t * create_node(Args &&... args) {
         node_t * node = _alloc.allocate(1);
-        new (node) node_t(linked_list_traits::forward<Args>(args)...); // construct
+        ::new (node, micro::blah) node_t(linked_list_traits::forward<Args>(args)...); // construct
         return node;
     }
-
-    iterator insert(const_iterator pos, const T & value) {
+    iterator insert_node_internal(const_iterator pos, node_t * node) {
         // insert a new node before pos
-        const auto * node_pos = pos._node;
-        const auto * node_before_pos = pos._node->prev;
-        const auto * node_new = create_node(value);
+        auto * node_pos = pos._node;
+        auto * node_before_pos = pos._node->prev;
+        auto * node_new = node;
         node_before_pos->next = node_new;
         node_pos->prev = node_new;
         node_new->prev = node_before_pos;
         node_new->next = node_pos;
         _size+=1;
         return iterator(node_new);
+    }
+
+public:
+    // inserts
+
+    iterator insert(const_iterator pos, const T & value) {
+        // insert a new node before pos
+        return insert_node_internal(pos, create_node(value));
     }
 
     iterator insert(const_iterator pos, T&& value) {
         // insert a new node before pos
-        const auto * node_pos = pos._node;
-        const auto * node_before_pos = pos._node->prev;
-        const auto * node_new = create_node(linked_list_traits::move(value));
-        node_before_pos->next = node_new;
-        node_pos->prev = node_new;
-        node_new->prev = node_before_pos;
-        node_new->next = node_pos;
-        _size+=1;
-        return iterator(node_new);
+        return insert_node_internal(pos, create_node(linked_list_traits::move(value)));
     }
 
-    template<class... Args>
-    iterator insert(const_iterator pos, Args&&... args) {
-        // insert a new node before pos
-        const auto * node_pos = pos._node;
-        const auto * node_before_pos = pos._node->prev;
-        const auto * node_new = create_node(linked_list_traits::forward<Args>(args)...);
-        node_before_pos->next = node_new;
-        node_pos->prev = node_new;
-        node_new->prev = node_before_pos;
-        node_new->next = node_pos;
-        _size+=1;
-        return iterator(node_new);
+    iterator insert(const_iterator pos, uint count, const T & value) {
+        if(count==0) return pos;
+        auto first_pos = insert(pos, value);
+        for (int ix = 1; ix < count; ++ix)
+            insert(pos, value);
+        return first_pos;
     }
 
-    iterator insert(const_iterator pos, const uint count, const T& value) {
-        iterator iter(--pos);
-        for (int ix = 0; ix < count; ++ix) insert(pos, value);
-        return ++iter;
-    }
     template<class InputIt>
     iterator insert(const_iterator pos, InputIt first, InputIt last ) {
-        iterator iter(--pos);
-        while(first++!=last) insert(pos, *first);
+        iterator iter(pos); --iter;
+        do {
+            insert(pos, *first);
+        } while (++first!=last);
         return ++iter;
     }
+
+private:
+    template<class... Args>
+    iterator insert_emplace(const_iterator pos, Args&&... args) {
+        // insert a new node before pos
+        return insert_node_internal(pos,
+                    create_node(linked_list_traits::forward<Args>(args)...));
+    }
+
+public:
 
     iterator erase(const_iterator pos) {
         if(pos==end()) return pos;
@@ -286,62 +303,63 @@ public:
         // destruct
         node_to_erase->~node_t();
         // de-allocate
-        _alloc.deallocate(node_to_erase);
+        _alloc.deallocate((node_t *)node_to_erase);
         // size update
         _size -= 1;
         return iterator(after);
     }
 
     iterator erase(const_iterator first, const_iterator last) {
-        const bool is_last_end = last == end();
-        while (first++!=last)
-            erase(first);
+        const bool is_last_end = last == cend();
+        auto iter = first;
+        while (iter!=last) iter = erase(iter);
         // If last==end() prior to removal, then the updated end() iterator is returned.
-        return is_last_end ? end() : last;
+        return is_last_end ? cend() : last;
     }
 
     void push_back(const T & value) {
-       insert(end(), value);
+       insert(cend(), value);
     }
     void push_back(T && value) {
-        insert(end(), linked_list_traits::move(value));
+        insert(cend(), linked_list_traits::move(value));
     }
     void push_front(const T & value) {
-        insert(begin(), value);
+        insert(cbegin(), value);
     }
     void push_front(T && value) {
-        insert(begin(), linked_list_traits::move(value));
+        insert(cbegin(), linked_list_traits::move(value));
     }
     void pop_back() {
         if(empty()) return;
-        erase(--end());
+        erase(--cend());
     }
     void pop_front() {
         if(empty()) return;
-        erase(begin());
+        erase(cbegin());
     }
 
     template<typename... Args>
     iterator emplace(const_iterator pos, Args&&... args) {
-        return insert(pos, linked_list_traits::forward<Args>(args)...);
+        return insert_emplace(pos, linked_list_traits::forward<Args>(args)...);
     }
 
     template<typename... Args>
-    iterator emplace_back(const_iterator pos, Args&&... args) {
+    iterator emplace_back(Args&&... args) {
         return emplace<Args...>(end(), linked_list_traits::forward<Args>(args)...);
     }
 
     template<typename... Args>
-    iterator emplace_front(const_iterator pos, Args&&... args) {
+    iterator emplace_front(Args&&... args) {
         return emplace<Args...>(begin(), linked_list_traits::forward<Args>(args)...);
     }
 
-    void clear() noexcept {
-        if(empty()) return;
-        const auto iter = begin();
-        while (iter++!=end())
-            erase(iter);
+    void clear() { while (size()) erase(--end()); }
+
+private:
+    node_t * non_const_node(const node_t * node) const {
+        return const_cast<node_t *>(node);
     }
+public:
 
     Allocator get_allocator() const noexcept { return Allocator(_alloc); }
     const_reference back() const noexcept { return *(--end()); }
@@ -351,9 +369,9 @@ public:
     bool empty() const noexcept { return size()==0; }
     index size() const noexcept { return _size; }
     iterator begin() noexcept {return iterator(_sentinel_node.next);}
-    const_iterator begin() const noexcept {return const_iterator(_sentinel_node.next);}
-    const_iterator cbegin() const noexcept {return const_iterator(_sentinel_node.next);}
-    iterator end() noexcept {return iterator(_sentinel_node);}
-    const_iterator end() const noexcept {return const_iterator(_sentinel_node);}
-    const_iterator cend() const noexcept {return const_iterator(_sentinel_node);}
+    const_iterator begin() const noexcept {return const_iterator(non_const_node(_sentinel_node.next));}
+    const_iterator cbegin() const noexcept {return const_iterator(non_const_node(_sentinel_node.next));}
+    iterator end() noexcept {return iterator(&_sentinel_node);}
+    const_iterator end() const noexcept {return const_iterator(non_const_node(&_sentinel_node));}
+    const_iterator cend() const noexcept {return const_iterator(non_const_node(&_sentinel_node));}
 };

@@ -8,7 +8,7 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 todo
 
 ## Installing `micro{containers}`
-`micro-containers` is a headers only library, which gives the following install possibilities:
+`micro-containers` is node headers only library, which gives the following install possibilities:
 1. Using `cmake` to invoke the `install` target, that will copy everything in your system via
 ```
 $ mkdir cmake-build-release
@@ -20,7 +20,7 @@ $ cmake --install .
 
 ## Consuming `micro{containers}`
 Following options are available:
-1. copy the project to a sub folder of your project. inside your **`CMakeLists.txt`** add
+1. copy the project to node sub folder of your project. inside your **`CMakeLists.txt`** add
 ```cmake
 add_subdirectory(/path/to/micro-containers)
 target_link_libraries(your_app micro-containers)
@@ -41,7 +41,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/path/to/Findmicro-containers
 find_package(micro-containers REQUIRED)
 target_link_libraries(your_app micro-containers::micro-containers)
 ```
-5. Just copy the `include/micro-containers` into a sub folder of your project and include the header  
+5. Just copy the `include/micro-containers` into node sub folder of your project and include the header  
    files you need with relative path in your source files.
 
 ## Running Examples
