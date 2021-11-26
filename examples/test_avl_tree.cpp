@@ -112,6 +112,8 @@ void test_successor() {
     }
     std::cout << current->key << ", ";
     std::cout << ")" << std::endl;
+    current = avl.successor(current);
+
 }
 
 void test_predecessor() {
@@ -159,6 +161,36 @@ void test_contains() {
     std::cout << avl.contains(449) << std::endl;
 }
 
+void test_iterator() {
+    std::cout << "test_iterator" << std::endl;
+
+    using avl_t = avl_tree<int, std::less<int>>;
+    avl_t avl;
+
+    avl.insert(100);
+    avl.insert(50);
+    avl.insert(150);
+    avl.insert(250);
+    avl.insert(350);
+    avl.insert(450);
+    //
+
+    std::cout << "(";
+    for (const auto & node : avl) {
+        std::cout << node.key << ", ";
+    }
+    std::cout << ")" << std::endl;
+
+    //
+    auto current = avl.begin();
+    const auto end = avl.end();
+    std::cout << "(";
+    do {
+        std::cout << (*current).key << ", ";
+    } while(++current!=end);
+    std::cout << ")";
+}
+
 int main() {
 //    test_insert();
 //    test_remove();
@@ -167,8 +199,11 @@ int main() {
 //    test_max_min();
 //    test_successor();
 //    test_predecessor();
-    test_contains();
+//    test_contains();
+    test_iterator();
 
-
+    int b = 5;
+    int * a = &b;
+    int & c = *a;
 }
 

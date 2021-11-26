@@ -102,9 +102,7 @@ public:
                 prev(nullptr), next(nullptr), value(linked_list_traits::move($value)) {}
         template<class... Args>
         node_t(Args&&... args) : prev(nullptr), next(nullptr),
-                    value(linked_list_traits::forward<Args>(args)...) {
-
-        }
+                    value(linked_list_traits::forward<Args>(args)...) {}
         node_t * prev;
         node_t * next;
         value_type value;
@@ -359,6 +357,7 @@ private:
     node_t * non_const_node(const node_t * node) const {
         return const_cast<node_t *>(node);
     }
+
 public:
 
     Allocator get_allocator() const noexcept { return Allocator(_alloc); }

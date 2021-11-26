@@ -30,9 +30,40 @@ private:
                 height(-1) {}
     };
 
+    template<class value_reference_type>
+    struct iterator_t {
+        const node_t * _node;
+        const avl_tree * _tree;
+
+        node_t * ncn(const node_t * node) const
+        { return const_cast<node_t *>(node); }
+        template<class value_reference_type_t>
+        iterator_t(const iterator_t<value_reference_type_t> & other) : _node(other._node), _tree(other._tree) {}
+        explicit iterator_t(const node_t * start, const avl_tree * tree) : _node(start), _tree(tree) {}
+        iterator_t& operator++() { _node=_tree->successor(_node); if(!_node) _node=&_tree->_node_end; return *this;}
+        iterator_t& operator--() { _node=_tree->predecessor(_node); return *this;}
+        iterator_t operator++(int) {iterator_t retval(_node, _tree); ++(*this); return retval;}
+        iterator_t operator--(int) {iterator_t retval(_node, _tree); --(*this); return retval;}
+        bool operator==(iterator_t other) const {return _node == other._node;}
+        bool operator!=(iterator_t other) const {return !(*this == other);}
+        value_reference_type operator*() const {return *ncn(_node) ;}
+    };
+
 public:
     using node_type = node_t;
+    using iterator = iterator_t<node_type &>;
+    using const_iterator = iterator_t<const node_type &>;
     using rebind_alloc = typename Allocator:: template rebind<node_type>::other;
+    static constexpr unsigned long node_type_size = sizeof (node_type);
+
+    // iter
+    node_t _node_end;
+    iterator begin() noexcept { return iterator{minimum(), this}; }
+    const_iterator begin() const noexcept { return const_iterator{minimum(), this}; }
+    const_iterator cbegin() const noexcept { return begin(); }
+    iterator end() noexcept { return iterator{&_node_end, this}; }
+    const_iterator end() const noexcept { return const_iterator{&_node_end, this}; }
+    const_iterator cend() const noexcept { return end(); }
 
 private:
     Compare compare;
@@ -42,7 +73,7 @@ private:
 public:
 
     avl_tree(const Allocator & allocator=Allocator()) :
-                _root(nullptr), compare(Compare()), _alloc(allocator) {};
+                _root(nullptr), compare(Compare()), _alloc(allocator), _node_end(Key()) {};
     avl_tree(const avl_tree & other, const Allocator & allocator) :
             avl_tree(allocator) {
         // todo
@@ -205,11 +236,14 @@ public:
         } else if(isPreceding(node->key, k)) {
             node->right = remove(node->right, k);
         } else {
-            if (node->left == nullptr || node->right == nullptr) {
+            if (node->left==nullptr || node->right==nullptr) {
                 //  if is leaf
-                node = (node->left == nullptr) ? node->right : node->left;
+                auto * node_to_remove = node;
+                node = (node->left) ? node->left : node->right;
+                node_to_remove->~node_t();
+                _alloc.deallocate(node_to_remove);
             } else {
-                //  find the successor = left most in right tree
+                //  replace with successor = left most in right tree, and then remove successor
                 auto * successor_node = const_cast<node_t *>(minimum(node->right));
                 node->key = successor_node->key;
                 node->right = remove(node->right, node->key);
