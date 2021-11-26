@@ -89,12 +89,86 @@ void test_max_min() {
     const auto * node_min = avl.minimum();
 }
 
+void test_successor() {
+    std::cout << "test_successor" << std::endl;
+
+    using avl_t = avl_tree<int, std::less<int>>;
+    avl_t avl;
+
+    avl.insert(100);
+    avl.insert(50);
+    avl.insert(150);
+    avl.insert(250);
+    avl.insert(350);
+    avl.insert(450);
+    //
+
+    const auto * node_max = avl.maximum();
+    const auto * current = avl.minimum();
+    std::cout << "(";
+    while (current!=node_max) {
+        std::cout << current->key << ", ";
+        current = avl.successor(current);
+    }
+    std::cout << current->key << ", ";
+    std::cout << ")" << std::endl;
+}
+
+void test_predecessor() {
+    std::cout << "test_predecessor" << std::endl;
+
+    using avl_t = avl_tree<int, std::less<int>>;
+    avl_t avl;
+
+    avl.insert(100);
+    avl.insert(50);
+    avl.insert(150);
+    avl.insert(250);
+    avl.insert(350);
+    avl.insert(450);
+    //
+
+    const auto * node_min = avl.minimum();
+    const auto * current = avl.maximum();
+    std::cout << "(";
+    while (current!=node_min) {
+        std::cout << current->key << ", ";
+        current = avl.predecessor(current);
+    }
+    std::cout << current->key << ", ";
+    std::cout << ")" << std::endl;
+}
+
+void test_contains() {
+    std::cout << "test_contains" << std::endl;
+
+    using avl_t = avl_tree<int, std::less<int>>;
+    avl_t avl;
+
+    avl.insert(100);
+    avl.insert(50);
+    avl.insert(150);
+    avl.insert(250);
+    avl.insert(350);
+    avl.insert(450);
+    //
+
+    std::cout << avl.contains(50) << std::endl;
+    std::cout << avl.contains(450) << std::endl;
+    std::cout << avl.contains(54) << std::endl;
+    std::cout << avl.contains(449) << std::endl;
+}
+
 int main() {
 //    test_insert();
 //    test_remove();
 //    test_clear();
 //    test_find();
-    test_max_min();
+//    test_max_min();
+//    test_successor();
+//    test_predecessor();
+    test_contains();
+
 
 }
 

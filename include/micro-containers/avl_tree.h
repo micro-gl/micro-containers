@@ -77,7 +77,7 @@ public:
         return nullptr;
     }
     bool contains(const Key &k) const { return contains(getRoot(), k); }
-    bool contains(node_t * root, const Key &k) const { return find(root, k) != nullptr; }
+    bool contains(const node_t * root, const Key &k) const { return find(root, k) != nullptr; }
     const node_t * findLowerBoundOf(const Key & key) const {
         const node_t * root = getRoot();
         node_t * candidate = nullptr;
@@ -120,6 +120,8 @@ public:
         return candidate;
     }
 
+    const node_t * successor(const node_t * node) const
+    { return successor(node, getRoot()); }
     const node_t * successor(const node_t * node, const node_t * root) const {
         // Step 1 of the above algorithm
         if (node->right) return minimum(node->right);
@@ -135,10 +137,12 @@ public:
         return succ;
     }
 
+    const node_t * predecessor(const node_t * node) const
+    { return predecessor(node, getRoot()); }
     const node_t * predecessor(const node_t * node, const node_t * root) const {
         // Step 1 of the above algorithm
         if (node->left) return maximum(node->left);
-        node_t * pred = nullptr;
+        const node_t * pred = nullptr;
         // Start from root and search for predecessor down the tree
         while (root) {
             if (isPreceding(node->key, root->key)) {
