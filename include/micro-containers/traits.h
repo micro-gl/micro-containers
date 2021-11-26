@@ -10,7 +10,7 @@
 ========================================================================================*/
 #pragma once
 
-namespace microtess {
+namespace micro_containers {
     namespace traits {
 
         template< class T > struct remove_reference      {typedef T type;};
@@ -67,9 +67,41 @@ namespace microtess {
 
         // allocator aware traits with SFINAE
         template <typename T, typename = int>
-        struct is_allocator_aware : microtess::traits::false_type { };
+        struct is_allocator_aware : micro_containers::traits::false_type { };
 
         template <typename T>
-        struct is_allocator_aware <T, decltype((void) T().get_allocator(), 0)> : microtess::traits::true_type { };
+        struct is_allocator_aware <T, decltype((void) T().get_allocator(), 0)> : micro_containers::traits::true_type { };
+
+
+        /**
+         * standard allocator
+         * @tparam T the allocated object type
+         */
+        template<typename T>
+        class std_allocator {
+        public:
+            using value_type = T;
+            using size_t = unsigned long;
+        public:
+            template<class U>
+            explicit std_allocator(const std_allocator<U> & other) noexcept { };
+            explicit std_allocator()=default;
+
+            template <class U, class... Args>
+            void construct(U* p, Args&&... args) {
+                new(p) U(traits::forward<Args>(args)...);
+            }
+            T * allocate(size_t n) { return (T *)operator new(n * sizeof(T)); }
+            void deallocate(T * p, size_t n=0) { operator delete (p); }
+
+            template<class U> struct rebind {
+                typedef std_allocator<U> other;
+            };
+        };
+
+        template<class T1, class T2>
+        bool operator==(const std_allocator<T1>& lhs, const std_allocator<T2>& rhs ) noexcept {
+            return true;
+        }
     }
 }

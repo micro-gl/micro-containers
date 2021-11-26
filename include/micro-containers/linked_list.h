@@ -17,7 +17,7 @@ inline void* operator new (unsigned long n, void* ptr, enum micro) noexcept {
     return ptr;
 }
 #else
-inline void* operator new (MICRO_CONTAINERS_SIZE n, void* ptr, enum micro) noexcept {
+inline void* operator new (MICRO_CONTAINERS_SIZE_TYPE n, void* ptr, enum micro) noexcept {
     return ptr;
 }
 #endif
@@ -84,7 +84,6 @@ namespace linked_list_traits {
  */
 template<typename T, class Allocator=linked_list_traits::std_allocator<T>>
 class linked_list {
-    using const_dynamic_array_ref = const linked_list<T, Allocator> &;
 public:
     using value_type = T;
     using allocator_type = Allocator;
@@ -129,6 +128,7 @@ public:
 
     using iterator = iterator_t<reference>;
     using const_iterator = iterator_t<const_reference>;
+    using node_type = node_t;
 
 private:
     using rebind_allocator_type = typename Allocator::template rebind<node_t>::other;

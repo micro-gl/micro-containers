@@ -49,7 +49,7 @@ First make sure you have
 - [cmake](https://cmake.org/download/) installed at your system.
 
 There are two ways:
-1. Use your favourite IDE to load the root `CMakeLists.txt` file, and then it   
+1. Use your favourite IDE to load the _root `CMakeLists.txt` file, and then it   
    will pick up all of the targets, including the examples
 2. Using the command line:
 ```bash

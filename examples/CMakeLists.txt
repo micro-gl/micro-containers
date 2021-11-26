@@ -16,6 +16,7 @@ set(libs micro-containers)
 
 set(SOURCES
         test_linked_list.cpp
+        test_avl_tree.cpp
         )
 
 set(SOURCES_SHARED "")

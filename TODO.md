@@ -1,4 +1,5 @@
 - DONE: linked list
+- linked-list -> inherit node with value type so sentinel will not hold value-type
 - dictionary
 - hash-table
 - heap
