@@ -3,6 +3,28 @@
 
 #include <micro-containers/avl_tree.h>
 
+using std::to_string;
+
+struct dummy_t {
+    int a, b;
+    explicit dummy_t(int $a=0, int $b=1) : a($a), b($b) {}
+};
+
+std::string to_string(const dummy_t& value) {
+    std::ostringstream os;
+    os << "{ a: " << value.a << ", b: " << value.b << "}";
+    return os.str();
+}
+
+template<class Container>
+void print_tree(const Container & container) {
+    std::cout << "(";
+    for (const auto & item : container) {
+        std::cout << to_string(item.key) << ", ";
+    }
+    std::cout << ")" << std::endl;
+}
+
 void test_insert() {
     std::cout << "test_insert" << std::endl;
 
@@ -191,6 +213,66 @@ void test_iterator() {
     std::cout << ")";
 }
 
+void test_copy_and_move_ctor() {
+    std::cout << "test_copy_and_move_ctor" << std::endl;
+
+    using avl_t = avl_tree<int, std::less<int>>;
+    avl_t avl1;
+
+    avl1.insert(100);
+    avl1.insert(50);
+    avl1.insert(150);
+    avl1.insert(250);
+    avl1.insert(350);
+    avl1.insert(450);
+    //
+
+    std::cout << "- printing avl_1" << std::endl;
+    print_tree(avl1);
+
+    // copy ctor of avl2
+    avl_t avl2 = avl1;
+    std::cout << "- printing copy-constructed avl_2" << std::endl;
+    print_tree(avl2);
+
+    // move ctor of avl3
+    avl_t avl3 = std::move(avl1);
+    std::cout << "- printing move-constructed avl_3 from avl_1" << std::endl;
+    print_tree(avl3);
+    std::cout << "- printing moved avl_1" << std::endl;
+    print_tree(avl1);
+}
+
+void test_copy_and_move_assignment() {
+    std::cout << "test_copy_and_move_assignment" << std::endl;
+
+    using avl_t = avl_tree<int, std::less<int>>;
+    avl_t avl1, avl2, avl3;
+
+    avl1.insert(100);
+    avl1.insert(50);
+    avl1.insert(150);
+    avl1.insert(250);
+    avl1.insert(350);
+    avl1.insert(450);
+    //
+
+    std::cout << "- printing avl_1" << std::endl;
+    print_tree(avl1);
+
+    // copy-assign of avl2
+    avl2 = avl1;
+    std::cout << "- printing copy-assigned avl_2" << std::endl;
+    print_tree(avl2);
+
+    // move-assigned of avl3
+    avl3 = std::move(avl1);
+    std::cout << "- printing move-assigned avl_3 from avl_1" << std::endl;
+    print_tree(avl3);
+    std::cout << "- printing moved avl_1" << std::endl;
+    print_tree(avl1);
+}
+
 int main() {
 //    test_insert();
 //    test_remove();
@@ -199,11 +281,9 @@ int main() {
 //    test_max_min();
 //    test_successor();
 //    test_predecessor();
-//    test_contains();
-    test_iterator();
-
-    int b = 5;
-    int * a = &b;
-    int & c = *a;
+    test_contains();
+//    test_iterator();
+//    test_copy_and_move_ctor();
+    test_copy_and_move_assignment();
 }
 

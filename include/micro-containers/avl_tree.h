@@ -12,8 +12,17 @@
 
 #include "traits.h"
 
-template<typename Key,
-         typename Compare,
+/**
+ * AVL Tree balanced tree, logarithmic complexity everything.
+ * Notes:
+ * - Most algorithms use recursion, so there is a stack memory cost of O(log(n))
+ * - This class is Allocator-Aware
+ * @tparam Key the key type, that the tree stores
+ * @tparam Compare compare structure or lambda
+ * @tparam Allocator allocator type
+ */
+template<class Key,
+         class Compare,
          class Allocator=micro_containers::traits::std_allocator<char>>
 class avl_tree {
 public:
@@ -32,7 +41,7 @@ private:
 
     template<class value_reference_type>
     struct iterator_t {
-        const node_t * _node;
+        const node_t * _node; // nullptr _node is end signal
         const avl_tree * _tree;
 
         node_t * ncn(const node_t * node) const
@@ -40,7 +49,7 @@ private:
         template<class value_reference_type_t>
         iterator_t(const iterator_t<value_reference_type_t> & other) : _node(other._node), _tree(other._tree) {}
         explicit iterator_t(const node_t * start, const avl_tree * tree) : _node(start), _tree(tree) {}
-        iterator_t& operator++() { _node=_tree->successor(_node); if(!_node) _node=&_tree->_node_end; return *this;}
+        iterator_t& operator++() { _node=_tree->successor(_node); return *this;}
         iterator_t& operator--() { _node=_tree->predecessor(_node); return *this;}
         iterator_t operator++(int) {iterator_t retval(_node, _tree); ++(*this); return retval;}
         iterator_t operator--(int) {iterator_t retval(_node, _tree); --(*this); return retval;}
@@ -56,13 +65,12 @@ public:
     using rebind_alloc = typename Allocator:: template rebind<node_type>::other;
     static constexpr unsigned long node_type_size = sizeof (node_type);
 
-    // iter
-    node_t _node_end;
+    // iterators
     iterator begin() noexcept { return iterator{minimum(), this}; }
     const_iterator begin() const noexcept { return const_iterator{minimum(), this}; }
     const_iterator cbegin() const noexcept { return begin(); }
-    iterator end() noexcept { return iterator{&_node_end, this}; }
-    const_iterator end() const noexcept { return const_iterator{&_node_end, this}; }
+    iterator end() noexcept { return iterator{nullptr, this}; }
+    const_iterator end() const noexcept { return const_iterator{nullptr, this}; }
     const_iterator cend() const noexcept { return end(); }
 
 private:
@@ -73,32 +81,58 @@ private:
 public:
 
     avl_tree(const Allocator & allocator=Allocator()) :
-                _root(nullptr), compare(Compare()), _alloc(allocator), _node_end(Key()) {};
+                _root(nullptr), compare(Compare()), _alloc(allocator) {};
     avl_tree(const avl_tree & other, const Allocator & allocator) :
             avl_tree(allocator) {
-        // todo
+        for(const auto & node : other)
+            insert(node.key);
     }
     avl_tree(const avl_tree & other) : avl_tree(other, other.get_allocator()) {}
-    avl_tree(avl_tree && other) : avl_tree(other.get_allocator()) {
-        // todo
+    avl_tree(avl_tree && other, const Allocator & allocator) :
+            avl_tree(allocator) {
+        const bool are_equal_allocators = _alloc==allocator;
+        if(are_equal_allocators) {
+            _root=other._root;
+            other._root=nullptr;
+        } else {
+            for(const auto & node : other)
+                insert(micro_containers::traits::move(node.key));
+        }
     }
+    avl_tree(avl_tree && other)  noexcept :
+            avl_tree(micro_containers::traits::move(other), other.get_allocator()) {}
     ~avl_tree() { clear(); }
 
     avl_tree & operator=(const avl_tree & other) {
-        if(this==&(other)) return *this;
-        // todo
+        if(this!=&(other)) {
+            clear();
+            for (const auto & node: other)
+                insert(node.key);
+        }
+        return *this;
     }
     avl_tree & operator=(avl_tree && other) noexcept {
-        if(this==&(other)) return *this;
-        // todo
+        if(this!=&(other)) {
+            clear();
+            const bool are_equal_allocators = _alloc==other.get_allocator();
+            if(are_equal_allocators) {
+                _root=other._root;
+                other._root=nullptr;
+            } else {
+                for(const auto & node : other)
+                    insert(micro_containers::traits::move(node.key));
+                other.clear();
+            }
+        }
+        return *this;
     }
 
     Allocator get_allocator() const { return Allocator(_alloc); }
     const Compare & get_comparator() const { return compare; }
-    const node_t * getRoot() const { return _root; }
-    node_t * getRoot() { return _root; }
-    bool empty() const { return getRoot() == nullptr; }
-    const node_t * find(const Key &k) const { return find(getRoot(), k); }
+    const node_t * root() const { return _root; }
+    node_t * root() { return _root; }
+    bool empty() const { return root() == nullptr; }
+    const node_t * find(const Key &k) const { return find(root(), k); }
     const node_t * find(const node_t * root, const Key &k) const {
         const node_t * iter = root;
         while (iter != nullptr) {
@@ -107,10 +141,10 @@ public:
         }
         return nullptr;
     }
-    bool contains(const Key &k) const { return contains(getRoot(), k); }
+    bool contains(const Key &k) const { return contains(root(), k); }
     bool contains(const node_t * root, const Key &k) const { return find(root, k) != nullptr; }
     const node_t * findLowerBoundOf(const Key & key) const {
-        const node_t * root = getRoot();
+        const node_t * root = root();
         node_t * candidate = nullptr;
         while(root!= nullptr) {
             bool has_left = root->left!= nullptr;
@@ -131,7 +165,7 @@ public:
     }
 
     const node_t * findUpperBoundOf(const Key & key) const {
-        const node_t * root = getRoot();
+        const node_t * root = root();
         node_t * candidate = nullptr;
         while(root!= nullptr) {
             bool has_left = root->left!= nullptr;
@@ -152,9 +186,9 @@ public:
     }
 
     const node_t * successor(const node_t * node) const
-    { return successor(node, getRoot()); }
+    { return successor(node, root()); }
     const node_t * successor(const node_t * node, const node_t * root) const {
-        // Step 1 of the above algorithm
+        if(node==nullptr) return nullptr;
         if (node->right) return minimum(node->right);
         const node_t * succ = nullptr;
         // Start from root and search for successor down the tree
@@ -169,9 +203,9 @@ public:
     }
 
     const node_t * predecessor(const node_t * node) const
-    { return predecessor(node, getRoot()); }
+    { return predecessor(node, root()); }
     const node_t * predecessor(const node_t * node, const node_t * root) const {
-        // Step 1 of the above algorithm
+        if(node==nullptr) return nullptr;
         if (node->left) return maximum(node->left);
         const node_t * pred = nullptr;
         // Start from root and search for predecessor down the tree
@@ -185,33 +219,33 @@ public:
         return pred;
     }
 
-    const node_t * minimum() const { return minimum(getRoot()); }
+    const node_t * minimum() const { return minimum(root()); }
     static const node_t * minimum(const node_t * node) {
         const node_t* current = node;
-        while (current->left != nullptr) current = current->left;
+        while (current && current->left) current = current->left;
         return current;
     }
 
-    const node_t* maximum() const { return maximum(getRoot()); }
+    const node_t* maximum() const { return maximum(root()); }
     static const node_t* maximum(const node_t * node) {
         const node_t * iter = node;
         while (iter && iter->right) iter = iter->right;
         return iter;
     }
 
-    void clear() { while(!empty()) remove(getRoot()->key); }
+    void clear() { while(!empty()) remove(root()->key); }
 
     // inserts
-    const node_t * insert(const Key &k) { return _root = insert(getRoot(), k); }
+    const node_t * insert(const Key &k) { return _root = insert(root(), k); }
     const node_t * insert(Key &&k) {
-        return _root = insert(getRoot(), Key(micro_containers::traits::move(k)));
+        return _root = insert(root(), Key(micro_containers::traits::move(k)));
     }
     template<class... Args>
     const node_t * insert_emplace(Args&&... args) {
-        return _root = insert(getRoot(), Key(micro_containers::traits::forward<Args>(args)...));
+        return _root = insert(root(), Key(micro_containers::traits::forward<Args>(args)...));
     }
 
-    node_t * insert(node_t * node, const Key & k) {
+    node_t * insert(node_t * node, const Key & k) { // node is a sub tree root
         if(node==nullptr) {
             auto * mem = _alloc.allocate(1);
             ::new (mem) node_t(k);
@@ -227,7 +261,7 @@ public:
         return re_balance(node);
     }
 
-    node_t* remove(const Key &k) { return _root = remove(getRoot(), k); }
+    node_t* remove(const Key &k) { return _root = remove(root(), k); }
     // make this iterative with a stack
     node_t* remove(node_t* node, const Key &k) { // deleting k key from node tree
         if(node==nullptr) return nullptr;
@@ -254,27 +288,19 @@ public:
     }
 
     // compare keys
-    bool isPreceding(const Key &lhs, const Key &rhs) const {
-        return compare(lhs, rhs);
-    }
-    bool isPrecedingOrEqual(const Key &lhs, const Key &rhs) const {
-        return compare(lhs, rhs) || isEqual(lhs, rhs);
-    }
-    bool isSucceeding(const Key &lhs, const Key &rhs) const {
-        return compare(rhs, lhs);
-    }
-    bool isEqual(const Key &lhs, const Key &rhs) const {
-        return !compare(lhs, rhs) && !compare(rhs, lhs);
-    }
-
-    int height_of_node(node_t* node) const { return node ? node->height : -1; }
+    bool isPreceding(const Key &lhs, const Key &rhs) const
+    { return compare(lhs, rhs); }
+    bool isPrecedingOrEqual(const Key &lhs, const Key &rhs) const
+    { return compare(lhs, rhs) || isEqual(lhs, rhs); }
+    bool isSucceeding(const Key &lhs, const Key &rhs) const
+    { return compare(rhs, lhs); }
+    bool isEqual(const Key &lhs, const Key &rhs) const
+    { return !compare(lhs, rhs) && !compare(rhs, lhs); }
 
 private:
-
-    int balance_factor(node_t * node) const {
-        return node==nullptr ? 0 : (height_of_node(node->right) - height_of_node(node->left));
-    }
-
+    int height_of_node(node_t* node) const { return node ? node->height : -1; }
+    int balance_factor(node_t * node) const
+    { return node==nullptr ? 0 : (height_of_node(node->right) - height_of_node(node->left)); }
     void fix_height(node_t * node) {
         auto hl = height_of_node(node->left);
         auto hr = height_of_node(node->right);
@@ -320,8 +346,7 @@ private:
     node_t * re_balance(node_t * node) { // balancing the node node_t
         fix_height(node);
         auto balance = balance_factor(node);
-        if(balance > 1 )
-        {
+        if(balance > 1) {
             if(height_of_node(node->right->right) > height_of_node(node->right->left))
                 node = rotate_left(node);
             else {

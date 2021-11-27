@@ -138,7 +138,7 @@ private:
     void reset_sentinel() { _sentinel_node.prev = _sentinel_node.next = &_sentinel_node; }
 
 public:
-    explicit linked_list(const Allocator & alloc = Allocator()) noexcept : _alloc{alloc} {
+    explicit linked_list(const Allocator & allocator = Allocator()) noexcept : _alloc{allocator} {
         reset_sentinel();
     }
 
@@ -147,26 +147,26 @@ public:
         for (int ix = 0; ix < count; ++ix) push_back(value);
     }
 
-    linked_list(const uint count, const Allocator & alloc = Allocator()) :
-            linked_list(count, T(), alloc) {}
+    linked_list(const uint count, const Allocator & allocator = Allocator()) :
+            linked_list(count, T(), allocator) {}
 
     template<class Iterable>
-    linked_list(const Iterable &list, const Allocator & alloc= Allocator()) noexcept :
-            linked_list(alloc) {
+    linked_list(const Iterable &list, const Allocator & allocator= Allocator()) noexcept :
+            linked_list(allocator) {
         for (const auto & item : list) push_back(item);
     }
 
-    linked_list(const linked_list & other, const Allocator & alloc) noexcept :
-            linked_list(alloc) {
+    linked_list(const linked_list & other, const Allocator & allocator) noexcept :
+            linked_list(allocator) {
         for (const auto & item : other) push_back(item);
     }
 
     linked_list(const linked_list & other) noexcept :
             linked_list(other, other.get_allocator()) {}
 
-    linked_list(linked_list && other, const Allocator & alloc) noexcept :
-            linked_list(alloc) {
-        const bool are_equal_allocators = alloc==other.get_allocator();
+    linked_list(linked_list && other, const Allocator & allocator) noexcept :
+            linked_list(allocator) {
+        const bool are_equal_allocators = allocator==other.get_allocator();
         if(are_equal_allocators) {
             _sentinel_node.next = other._sentinel_node.next;
             _sentinel_node.prev = other._sentinel_node.prev;
@@ -175,9 +175,11 @@ public:
             _size = other._size;
             other.reset_sentinel();
             other._size = 0;
-        } else
+        } else {
             for (const auto & item : other)
                 push_back(linked_list_traits::move(item));
+            other.clear();
+        }
     }
 
     linked_list(linked_list && other) noexcept :
@@ -200,9 +202,9 @@ public:
         const bool are_equal_allocators = _alloc == other.get_allocator();
         const bool self_assign = this == &other;
         if(self_assign) return *this;
+        clear();
         if(are_equal_allocators) {
             // clear and destruct current elements
-            clear();
             // move everything from other
             _sentinel_node.next = other._sentinel_node.next;
             _sentinel_node.prev = other._sentinel_node.prev;
@@ -337,26 +339,20 @@ public:
     }
 
     template<typename... Args>
-    iterator emplace(const_iterator pos, Args&&... args) {
-        return insert_emplace(pos, linked_list_traits::forward<Args>(args)...);
-    }
-
+    iterator emplace(const_iterator pos, Args&&... args)
+    { return insert_emplace(pos, linked_list_traits::forward<Args>(args)...); }
     template<typename... Args>
-    iterator emplace_back(Args&&... args) {
-        return emplace<Args...>(end(), linked_list_traits::forward<Args>(args)...);
-    }
-
+    iterator emplace_back(Args&&... args)
+    { return emplace<Args...>(end(), linked_list_traits::forward<Args>(args)...); }
     template<typename... Args>
-    iterator emplace_front(Args&&... args) {
-        return emplace<Args...>(begin(), linked_list_traits::forward<Args>(args)...);
-    }
+    iterator emplace_front(Args&&... args)
+    { return emplace<Args...>(begin(), linked_list_traits::forward<Args>(args)...); }
 
-    void clear() { while (size()) erase(--end()); }
+    void clear() { while (size()) erase(--end()); reset_sentinel(); }
 
 private:
-    node_t * non_const_node(const node_t * node) const {
-        return const_cast<node_t *>(node);
-    }
+    node_t * non_const_node(const node_t * node) const
+    { return const_cast<node_t *>(node); }
 
 public:
 

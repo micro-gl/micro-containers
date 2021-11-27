@@ -33,8 +33,10 @@ void test_clear() {
     list.push_back(3);
     list.push_back(4);
     list.push_back(5);
+    std::cout << "- list1 before clear" << std::endl;
     print_simple_container(list);
     list.clear();
+    std::cout << "- list1 after clear" << std::endl;
     print_simple_container(list);
 }
 
@@ -312,9 +314,9 @@ void test_pop_back_and_front() {
 }
 
 int main() {
-//    test_clear();
+    test_clear();
 //    test_erase();
-    test_pop_back_and_front();
+//    test_pop_back_and_front();
 //    test_erase_range();
 //    test_assign_copy();
 //    test_assign_move();
