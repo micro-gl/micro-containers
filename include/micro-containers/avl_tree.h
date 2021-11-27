@@ -12,6 +12,12 @@
 
 #include "traits.h"
 
+template<class Key>
+struct avl_less {
+    bool operator()(const Key& lhs, const Key& rhs) const
+    {return lhs < rhs;}
+};
+
 /**
  * AVL Tree balanced tree, logarithmic complexity everything.
  * Notes:
@@ -22,7 +28,7 @@
  * @tparam Allocator allocator type
  */
 template<class Key,
-         class Compare,
+         class Compare=avl_less<Key>,
          class Allocator=micro_containers::traits::std_allocator<char>>
 class avl_tree {
 public:

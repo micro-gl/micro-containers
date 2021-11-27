@@ -246,7 +246,7 @@ void test_copy_and_move_ctor() {
 void test_copy_and_move_assignment() {
     std::cout << "test_copy_and_move_assignment" << std::endl;
 
-    using avl_t = avl_tree<int, std::less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl1, avl2, avl3;
 
     avl1.insert(100);
@@ -281,7 +281,7 @@ int main() {
 //    test_max_min();
 //    test_successor();
 //    test_predecessor();
-    test_contains();
+//    test_contains();
 //    test_iterator();
 //    test_copy_and_move_ctor();
     test_copy_and_move_assignment();
