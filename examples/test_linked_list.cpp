@@ -166,7 +166,7 @@ void test_insert_single() {
     list1.push_back(4);
     list1.push_back(5);
 
-    std::cout << "list1 before insert" << std::endl;
+    std::cout << "list1 before insert_node" << std::endl;
     print_simple_container(list1);
 
     // iterator
@@ -179,7 +179,7 @@ void test_insert_single() {
     auto iter_2 = list1.end(); // 1
     list1.insert(iter_2, 6.f);
 
-    std::cout << "list1 after insert" << std::endl;
+    std::cout << "list1 after insert_node" << std::endl;
     print_simple_container(list1);
 }
 
@@ -193,7 +193,7 @@ void test_insert_multi() {
     list1.push_back(4);
     list1.push_back(5);
 
-    std::cout << "list1 before insert" << std::endl;
+    std::cout << "list1 before insert_node" << std::endl;
     print_simple_container(list1);
 
     // iterator
@@ -202,7 +202,7 @@ void test_insert_multi() {
     ++iter; // 3
     auto iter2 = list1.insert(iter, 5, 2.5f);
 
-    std::cout << "list1 after insert" << std::endl;
+    std::cout << "list1 after insert_node" << std::endl;
     print_simple_container(list1);
 }
 
@@ -218,7 +218,7 @@ void test_insert_with_iterator() {
 
     linked_list<int> list2{list1};
 
-    std::cout << "list2 before insert" << std::endl;
+    std::cout << "list2 before insert_node" << std::endl;
     print_simple_container(list1);
 
     //
@@ -227,7 +227,7 @@ void test_insert_with_iterator() {
 
     list2.insert(iter_2, list1.begin(), list1.end());
 
-    std::cout << "list2 after insert" << std::endl;
+    std::cout << "list2 after insert_node" << std::endl;
     print_simple_container(list2);
 }
 

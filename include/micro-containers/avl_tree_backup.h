@@ -59,23 +59,19 @@ private:
         iterator_t operator--(int) {iterator_t retval(_node, _tree); --(*this); return retval;}
         bool operator==(iterator_t other) const {return _node == other._node;}
         bool operator!=(iterator_t other) const {return !(*this == other);}
-        value_reference_type operator*() const {return (*ncn(_node)).key ;}
+        value_reference_type operator*() const {return *ncn(_node) ;}
     };
 
 public:
     using node_type = node_t;
-    using iterator = iterator_t<Key &>;
-    using const_iterator = iterator_t<const Key &>;
+    using iterator = iterator_t<node_type &>;
+    using const_iterator = iterator_t<const node_type &>;
     using rebind_alloc = typename Allocator:: template rebind<node_type>::other;
-    using insert_result = struct insert_result_t {
-        const_iterator first; bool second;
-        insert_result_t(const const_iterator &a, bool b) : first(a), second(b) {}
-    };
     static constexpr unsigned long node_type_size = sizeof (node_type);
 
     // iterators
-    iterator begin() noexcept { return iterator{minimum()}; }
-    const_iterator begin() const noexcept { return const_iterator{minimum()}; }
+    iterator begin() noexcept { return iterator{minimum(), this}; }
+    const_iterator begin() const noexcept { return const_iterator{minimum(), this}; }
     const_iterator cbegin() const noexcept { return begin(); }
     iterator end() noexcept { return iterator{nullptr, this}; }
     const_iterator end() const noexcept { return const_iterator{nullptr, this}; }
@@ -96,7 +92,8 @@ public:
             avl_tree(Compare(), allocator) {};
     avl_tree(const avl_tree & other, const Allocator & allocator) :
             avl_tree(allocator) {
-        for(const auto & key : other) insert(key);
+        for(const auto & node : other)
+            insert(node.key);
     }
     avl_tree(const avl_tree & other) : avl_tree(other, other.get_allocator()) {}
     avl_tree(avl_tree && other, const Allocator & allocator) :
@@ -108,8 +105,8 @@ public:
             other._root=nullptr;
             other._size=0;
         } else {
-            for(const auto & key : other)
-                insert(micro_containers::traits::move(key));
+            for(const auto & node : other)
+                insert(micro_containers::traits::move(node.key));
             other.clear();
         }
     }
@@ -119,7 +116,9 @@ public:
 
     avl_tree & operator=(const avl_tree & other) {
         if(this!=&(other)) {
-            clear(); for (const auto & key: other) insert(key);
+            clear();
+            for (const auto & node: other)
+                insert(node.key);
         }
         return *this;
     }
@@ -133,8 +132,8 @@ public:
                 other._root=nullptr;
                 other._size=0;
             } else {
-                for(const auto & key : other)
-                    insert(micro_containers::traits::move(key));
+                for(const auto & node : other)
+                    insert(micro_containers::traits::move(node.key));
                 other.clear();
             }
         }
@@ -147,9 +146,18 @@ public:
     node_t * root() { return _root; }
     bool empty() const { return root() == nullptr; }
     unsigned int size() const { return _size; }
-    const_iterator find(const Key &k) const { return const_iterator(find_node(root(), k), this); }
+    const node_t * find(const Key &k) const { return find(root(), k); }
+    const node_t * find_node(const node_t * root, const Key &k) const {
+        const node_t * iter = root;
+        while (iter != nullptr) {
+            if (isEqual(k, iter->key)) return iter;
+            iter = isPreceding(k, iter->key) ? iter->left : iter->right;
+        }
+        return nullptr;
+    }
     bool contains(const Key &k) const { return contains(root(), k); }
-    const_iterator findLowerBoundOf(const Key & key) const {
+    bool contains(const node_t * root, const Key &k) const { return find(root, k) != nullptr; }
+    const node_t * findLowerBoundOf(const Key & key) const {
         const node_t * root = root();
         node_t * candidate = nullptr;
         while(root!= nullptr) {
@@ -167,10 +175,10 @@ public:
                 else break;
             }
         }
-        return const_iterator(candidate, this);
+        return candidate;
     }
 
-    const_iterator findUpperBoundOf(const Key & key) const {
+    const node_t * findUpperBoundOf(const Key & key) const {
         const node_t * root = root();
         node_t * candidate = nullptr;
         while(root!= nullptr) {
@@ -188,59 +196,9 @@ public:
                 else break;
             }
         }
-        return const_iterator(candidate, this);
+        return candidate;
     }
 
-    const_iterator minimum() const { return const_iterator(minimum(root()), this); }
-    const_iterator maximum() const { return const_iterator(maximum(root()), this); }
-
-    void clear() { while(!empty()) remove(root()->key); }
-    // inserts, return the new root
-    insert_result insert(const Key &k) {
-        node_t * new_node=nullptr; bool has_succeeded=false;
-        _root = insert_node(root(), k, &new_node, has_succeeded);
-        return insert_result(const_iterator(new_node, this), has_succeeded);
-    }
-    insert_result insert(Key &&k) {
-        node_t * new_node=nullptr; bool has_succeeded=false;
-        _root = insert_node(root(), Key(micro_containers::traits::move(k)),
-                            &new_node, has_succeeded);
-        return insert_result(const_iterator(new_node, this), has_succeeded);
-    }
-    template<class... Args>
-    insert_result insert_emplace(Args&&... args) {
-        node_t * new_node=nullptr; bool has_succeeded=false;
-        _root = insert_node(root(), Key(micro_containers::traits::forward<Args>(args)...),
-                            &new_node, has_succeeded);
-        return insert_result(const_iterator(new_node, this), has_succeeded);
-    }
-    // returns the new root
-    const_iterator remove(const Key &k) {
-        node_t * next_node=nullptr;
-        _root = remove_node(root(), k, &next_node);
-        return const_iterator(next_node, this);
-    }
-
-    // _compare keys
-    bool isPreceding(const Key &lhs, const Key &rhs) const
-    { return _compare(lhs, rhs); }
-    bool isPrecedingOrEqual(const Key &lhs, const Key &rhs) const
-    { return _compare(lhs, rhs) || isEqual(lhs, rhs); }
-    bool isSucceeding(const Key &lhs, const Key &rhs) const
-    { return _compare(rhs, lhs); }
-    bool isEqual(const Key &lhs, const Key &rhs) const
-    { return !_compare(lhs, rhs) && !_compare(rhs, lhs); }
-
-private:
-    const node_t * find_node(const node_t * root, const Key &k) const {
-        const node_t * iter = root;
-        while (iter != nullptr) {
-            if (isEqual(k, iter->key)) return iter;
-            iter = isPreceding(k, iter->key) ? iter->left : iter->right;
-        }
-        return nullptr;
-    }
-    bool contains(const node_t * root, const Key &k) const { return find_node(root, k) != nullptr; }
     const node_t * successor(const node_t * node) const
     { return successor(node, root()); }
     const node_t * successor(const node_t * node, const node_t * root) const {
@@ -257,6 +215,7 @@ private:
         }
         return succ;
     }
+
     const node_t * predecessor(const node_t * node) const
     { return predecessor(node, root()); }
     const node_t * predecessor(const node_t * node, const node_t * root) const {
@@ -273,70 +232,84 @@ private:
         }
         return pred;
     }
+
+    const node_t * minimum() const { return minimum(root()); }
     static const node_t * minimum(const node_t * node) {
         const node_t* current = node;
         while (current && current->left) current = current->left;
         return current;
     }
+
+    const node_t* maximum() const { return maximum(root()); }
     static const node_t* maximum(const node_t * node) {
         const node_t * iter = node;
         while (iter && iter->right) iter = iter->right;
         return iter;
     }
-    /**
-     * Insert a key
-     * @param root Tree root
-     * @param k key
-     * @param new_node New node or existing if key is already present
-     * @param has_succeeded True if new node created. False, otherwise;
-     * @return The new root of the tree
-     */
-    node_t * insert_node(node_t * root, const Key & k, // root is a sub tree root
-                         node_t ** new_node, bool & has_succeeded) {
-        if(root == nullptr) {
+
+    void clear() { while(!empty()) remove(root()->key); }
+
+    // inserts, return the new root
+    const node_t * insert(const Key &k) { return _root = insert(root(), k); }
+    const node_t * insert(Key &&k) {
+        return _root = insert(root(), Key(micro_containers::traits::move(k)));
+    }
+    template<class... Args>
+    const node_t * insert_emplace(Args&&... args) {
+        return _root = insert(root(), Key(micro_containers::traits::forward<Args>(args)...));
+    }
+    // returns the new root
+    node_t * insert(node_t * node, const Key & k) { // node is a sub tree root
+        if(node==nullptr) {
             auto * mem = _alloc.allocate(1);
             ::new (mem) node_t(k);
-            has_succeeded=true; *new_node=mem;
             _size+=1; return mem;
-        } else if(isPreceding(k, root->key)) {
-            root->left = insert_node(root->left, k, new_node, has_succeeded);
-        } else if(isSucceeding(k, root->key)) {
-            root->right = insert_node(root->right, k, new_node, has_succeeded);
-        } else { has_succeeded=false; *new_node=root; return root; } // duplicate keys
-        return re_balance(root);
+        } else if(isPreceding(k, node->key)) {
+            node->left = insert(node->left, k);
+        } else if(isSucceeding(k, node->key)) {
+            node->right = insert(node->right, k);
+        } else { return node; } // duplicate keys
+        return re_balance(node);
     }
-    /**
-     * Remove a root
-     * @param root Tree root
-     * @param k key
-     * @param next_node Next root after removal
-     * @return The new root
-     */
-    node_t* remove_node(node_t* root, const Key &k, node_t ** next_node) {
-        if(root == nullptr) return nullptr;
-        else if(isPreceding(k, root->key)) {
-            root->left = remove_node(root->left, k, next_node);
-        } else if(isPreceding(root->key, k)) {
-            root->right = remove_node(root->right, k, next_node);
+    // returns the new root
+    node_t* remove(const Key &k) { return _root = remove(root(), k); }
+    // returns the new root
+    node_t* remove(node_t* node, const Key &k) { // deleting k key from node tree
+        if(node==nullptr) return nullptr;
+        else if(isPreceding(k, node->key)) {
+            node->left = remove(node->left, k);
+        } else if(isPreceding(node->key, k)) {
+            node->right = remove(node->right, k);
         } else {
-            if (root->left == nullptr || root->right == nullptr) {
+            if (node->left==nullptr || node->right==nullptr) {
                 //  if is leaf
-                auto * node_to_remove = root;
-                root = (root->left) ? root->left : root->right;
+                auto * node_to_remove = node;
+                node = (node->left) ? node->left : node->right;
                 node_to_remove->~node_t();
-                _alloc.deallocate(node_to_remove); _size-=1;
+                _alloc.deallocate(node_to_remove);
+                _size-=1;
             } else {
-                //  replace with successor = left most in right tree, and then remove_node successor
-                auto * successor_node = const_cast<node_t *>(minimum(root->right));
-                root->key = successor_node->key;
-                root->right = remove_node(root->right, root->key, next_node);
-                *next_node = root;
+                //  replace with successor = left most in right tree, and then remove successor
+                auto * successor_node = const_cast<node_t *>(minimum(node->right));
+                node->key = successor_node->key;
+                node->right = remove(node->right, node->key);
             }
         }
-        if (root) root = re_balance(root);
-        return root;
+        if (node) node = re_balance(node);
+        return node;
     }
 
+    // _compare keys
+    bool isPreceding(const Key &lhs, const Key &rhs) const
+    { return _compare(lhs, rhs); }
+    bool isPrecedingOrEqual(const Key &lhs, const Key &rhs) const
+    { return _compare(lhs, rhs) || isEqual(lhs, rhs); }
+    bool isSucceeding(const Key &lhs, const Key &rhs) const
+    { return _compare(rhs, lhs); }
+    bool isEqual(const Key &lhs, const Key &rhs) const
+    { return !_compare(lhs, rhs) && !_compare(rhs, lhs); }
+
+private:
     int height_of_node(node_t* node) const { return node ? node->height : -1; }
     int balance_factor(node_t * node) const
     { return node==nullptr ? 0 : (height_of_node(node->right) - height_of_node(node->left)); }

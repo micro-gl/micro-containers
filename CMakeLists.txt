@@ -19,7 +19,7 @@ add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 # expose public include directory
 #target_include_directories(${PROJECT_NAME} INTERFACE ${PROJECT_SOURCE_DIR}/include)
 # define target includes for both direct build via add_subdirectory() and for
-# defined installation configuration to allow easier package find
+# defined installation configuration to allow easier package find_node
 target_include_directories(
         ${PROJECT_NAME} INTERFACE
         $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
@@ -48,7 +48,7 @@ configure_package_config_file(
         INSTALL_DESTINATION
         ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 # install cmake config files for targets of this lib, so they can be found more easily
-# without node custom find script, but with find_package(micro-containers CONFIG) command
+# without node custom find_node script, but with find_package(micro-containers CONFIG) command
 install(EXPORT ${PROJECT_NAME}_Targets
         FILE ${PROJECT_NAME}Targets.cmake
         NAMESPACE ${PROJECT_NAME}::

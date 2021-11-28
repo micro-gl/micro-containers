@@ -1,7 +1,7 @@
 #include <iostream>
 #include <sstream>
 
-#include <micro-containers/avl_tree.h>
+#include <micro-containers/dictionary.h>
 
 using std::to_string;
 
@@ -20,11 +20,11 @@ template<class Container>
 void print_tree(const Container & container) {
     std::cout << "(";
     for (const auto & item : container) {
-        std::cout << to_string(item) << ", ";
+        std::cout << to_string(item.key) << ", ";
     }
     std::cout << ")" << std::endl;
 }
-
+#include <map>
 void test_insert() {
     std::cout << "test_insert" << std::endl;
 
@@ -37,9 +37,6 @@ void test_insert() {
     avl.insert(250);
     avl.insert(350);
     avl.insert(450);
-
-    std::cout << "- tree after insertion: " << std::endl;
-    print_tree(avl);
 }
 
 void test_remove() {
@@ -54,18 +51,12 @@ void test_remove() {
     avl.insert(250);
     avl.insert(350);
     avl.insert(450);
-
-    std::cout << "- tree after insertion: " << std::endl;
-    print_tree(avl);
     //
     avl.remove(100);
     avl.remove(50);
     avl.remove(150);
     avl.remove(250);
     avl.remove(350);
-
-    std::cout << "- tree after removal: " << std::endl;
-    print_tree(avl);
 }
 
 void test_clear() {
@@ -81,14 +72,8 @@ void test_clear() {
     avl.insert(350);
     avl.insert(450);
     //
-    std::cout << "- tree after insertion: " << std::endl;
-    print_tree(avl);
 
     avl.clear();
-
-    std::cout << "- tree after clear: " << std::endl;
-    print_tree(avl);
-
 }
 
 void test_find() {
@@ -105,10 +90,7 @@ void test_find() {
     avl.insert(450);
     //
 
-    std::cout << "- tree after insertion: " << std::endl;
-    print_tree(avl);
-
-    auto iterator = avl.find(450);
+    const auto * node = avl.find(450);
 }
 
 void test_max_min() {
@@ -124,13 +106,9 @@ void test_max_min() {
     avl.insert(350);
     avl.insert(450);
     //
-    std::cout << "- tree after insertion: " << std::endl;
-    print_tree(avl);
 
-    const auto iter_max = avl.maximum();
-    const auto iter_min = avl.minimum();
-    std::cout << "- Maximum: " << *iter_max << std::endl;
-    std::cout << "- Minimum: " << *iter_min << std::endl;
+    const auto * node_max = avl.maximum();
+    const auto * node_min = avl.minimum();
 }
 
 void test_successor() {
@@ -146,22 +124,18 @@ void test_successor() {
     avl.insert(350);
     avl.insert(450);
     //
-    std::cout << "- tree after insertion: " << std::endl;
-    print_tree(avl);
 
-    auto iter_max = avl.maximum();
-    auto iter_current = avl.minimum();
-
-    std::cout << "- tree with insertion: " << std::endl;
-
+    const auto * node_max = avl.maximum();
+    const auto * current = avl.minimum();
     std::cout << "(";
-    while (iter_current != iter_max) {
-        std::cout << *(iter_current) << ", ";
-        ++iter_current;
+    while (current!=node_max) {
+        std::cout << current->key << ", ";
+        current = avl.successor(current);
     }
-    std::cout << *(iter_current) << ", ";
+    std::cout << current->key << ", ";
     std::cout << ")" << std::endl;
-    ++iter_current;
+    current = avl.successor(current);
+
 }
 
 void test_predecessor() {
@@ -177,22 +151,16 @@ void test_predecessor() {
     avl.insert(350);
     avl.insert(450);
     //
-    std::cout << "- tree after insertion: " << std::endl;
-    print_tree(avl);
 
-    auto iter_min = avl.minimum();
-    auto iter_current = avl.maximum();
-
-    std::cout << "- tree with insertion: " << std::endl;
-
+    const auto * node_min = avl.minimum();
+    const auto * current = avl.maximum();
     std::cout << "(";
-    while (iter_current != iter_min) {
-        std::cout << *(iter_current) << ", ";
-        --iter_current;
+    while (current!=node_min) {
+        std::cout << current->key << ", ";
+        current = avl.predecessor(current);
     }
-    std::cout << *(iter_current) << ", ";
+    std::cout << current->key << ", ";
     std::cout << ")" << std::endl;
-    ++iter_current;
 }
 
 void test_contains() {
@@ -231,7 +199,7 @@ void test_iterator() {
 
     std::cout << "(";
     for (const auto & node : avl) {
-        std::cout << node << ", ";
+        std::cout << node.key << ", ";
     }
     std::cout << ")" << std::endl;
 
@@ -240,7 +208,7 @@ void test_iterator() {
     const auto end = avl.end();
     std::cout << "(";
     do {
-        std::cout << (*current) << ", ";
+        std::cout << (*current).key << ", ";
     } while(++current!=end);
     std::cout << ")";
 }
@@ -306,7 +274,7 @@ void test_copy_and_move_assignment() {
 }
 
 int main() {
-//    test_insert();
+    test_insert();
 //    test_remove();
 //    test_clear();
 //    test_find();
@@ -316,6 +284,6 @@ int main() {
 //    test_contains();
 //    test_iterator();
 //    test_copy_and_move_ctor();
-    test_copy_and_move_assignment();
+//    test_copy_and_move_assignment();
 }
 

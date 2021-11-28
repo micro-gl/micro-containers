@@ -241,7 +241,7 @@ private:
         return node;
     }
     iterator insert_node_internal(const_iterator pos, node_t * node) {
-        // insert a new node before pos
+        // insert_node a new node before pos
         auto * node_pos = pos._node;
         auto * node_before_pos = pos._node->prev;
         auto * node_new = node;
@@ -257,12 +257,12 @@ public:
     // inserts
 
     iterator insert(const_iterator pos, const T & value) {
-        // insert a new node before pos
+        // insert_node a new node before pos
         return insert_node_internal(pos, create_node(value));
     }
 
     iterator insert(const_iterator pos, T&& value) {
-        // insert a new node before pos
+        // insert_node a new node before pos
         return insert_node_internal(pos, create_node(linked_list_traits::move(value)));
     }
 
@@ -286,7 +286,7 @@ public:
 private:
     template<class... Args>
     iterator insert_emplace(const_iterator pos, Args&&... args) {
-        // insert a new node before pos
+        // insert_node a new node before pos
         return insert_node_internal(pos,
                     create_node(linked_list_traits::forward<Args>(args)...));
     }

@@ -1,0 +1,32 @@
+/*========================================================================================
+ Copyright (2021), Tomer Shalev (tomer.shalev@gmail.com, https://github.com/HendrixString).
+ All Rights Reserved.
+ License is a custom open source semi-permissive license with the following guidelines:
+ 1. unless otherwise stated, derivative work and usage of this file is permitted and
+    should be credited to the project and the author of this project.
+ 2. Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+========================================================================================*/
+#pragma once
+
+#include "traits.h"
+
+template<class T1, class T2>
+struct pair {
+    using first_type = T1;
+    using second_type = T2;
+    T1 first;
+    T2 second;
+
+    pair()=default;
+    ~pair()=default;
+    pair(const T1& x, const T2& y) : first(x), second(y) {}
+    template< class U1 = T1, class U2 = T2 >
+    constexpr pair(U1&& x, U2&& y) :
+            first(micro_containers::traits::forward<U1>(x)),
+            second(micro_containers::traits::forward<U1>(x)) {};
+    pair(const pair& p) = default;
+    pair(pair&& p) = default;
+};
+
