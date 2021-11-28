@@ -37,7 +37,6 @@ void print_dictionary(const Container & container) {
     std::cout << ")" << std::endl;
 }
 
-//#include <map>
 void test_insert() {
     std::cout << "test_insert" << std::endl;
 
@@ -52,6 +51,35 @@ void test_insert() {
 
     std::cout << "- printing dictionary" << std::endl;
     print_dictionary(d);
+}
+
+void test_insert_with_range() {
+    std::cout << "test_insert_with_range" << std::endl;
+
+    using dict = dictionary<int, int>;
+    dict d_1, d_2;
+
+    d_1.insert(pair<int, int>(50, 50));
+    d_1.insert(pair<int, int>(150, 150));
+    d_1.insert(pair<int, int>(250, 250));
+    d_1.insert(pair<int, int>(350, 350));
+    d_1.insert(pair<int, int>(450, 450));
+
+    d_2.insert(pair<int, int>(0, 0));
+    d_2.insert(pair<int, int>(1, 1));
+    d_2.insert(pair<int, int>(2, 2));
+    d_2.insert(pair<int, int>(350, 350));
+    d_2.insert(pair<int, int>(351, 351));
+
+    std::cout << "- printing dictionary d1" << std::endl;
+    print_dictionary(d_1);
+    std::cout << "- printing dictionary d2" << std::endl;
+    print_dictionary(d_2);
+
+    d_1.insert(d_2.begin(), d_2.end());
+
+    std::cout << "- printing dictionary d1 after insert" << std::endl;
+    print_dictionary(d_1);
 }
 
 void test_erase_with_iterator() {
@@ -225,191 +253,68 @@ void test_access_operator() {
 
     std::cout << "- dict[150] is " << d[150] << std::endl;
 }
-/*
-void test_max_min() {
-    std::cout << "test_max_min" << std::endl;
 
-    using avl_t = avl_tree<int, std::less<int>>;
-    avl_t avl;
-
-    avl.insert(100);
-    avl.insert(50);
-    avl.insert(150);
-    avl.insert(250);
-    avl.insert(350);
-    avl.insert(450);
-    //
-
-    const auto * node_max = avl.maximum();
-    const auto * node_min = avl.minimum();
-}
-
-void test_successor() {
-    std::cout << "test_successor" << std::endl;
-
-    using avl_t = avl_tree<int, std::less<int>>;
-    avl_t avl;
-
-    avl.insert(100);
-    avl.insert(50);
-    avl.insert(150);
-    avl.insert(250);
-    avl.insert(350);
-    avl.insert(450);
-    //
-
-    const auto * node_max = avl.maximum();
-    const auto * current = avl.minimum();
-    std::cout << "(";
-    while (current!=node_max) {
-        std::cout << current->key << ", ";
-        current = avl.successor(current);
-    }
-    std::cout << current->key << ", ";
-    std::cout << ")" << std::endl;
-    current = avl.successor(current);
-
-}
-
-void test_predecessor() {
-    std::cout << "test_predecessor" << std::endl;
-
-    using avl_t = avl_tree<int, std::less<int>>;
-    avl_t avl;
-
-    avl.insert(100);
-    avl.insert(50);
-    avl.insert(150);
-    avl.insert(250);
-    avl.insert(350);
-    avl.insert(450);
-    //
-
-    const auto * node_min = avl.minimum();
-    const auto * current = avl.maximum();
-    std::cout << "(";
-    while (current!=node_min) {
-        std::cout << current->key << ", ";
-        current = avl.predecessor(current);
-    }
-    std::cout << current->key << ", ";
-    std::cout << ")" << std::endl;
-}
-
-void test_contains() {
-    std::cout << "test_contains" << std::endl;
-
-    using avl_t = avl_tree<int, std::less<int>>;
-    avl_t avl;
-
-    avl.insert(100);
-    avl.insert(50);
-    avl.insert(150);
-    avl.insert(250);
-    avl.insert(350);
-    avl.insert(450);
-    //
-
-    std::cout << avl.contains(50) << std::endl;
-    std::cout << avl.contains(450) << std::endl;
-    std::cout << avl.contains(54) << std::endl;
-    std::cout << avl.contains(449) << std::endl;
-}
-
-void test_iterator() {
-    std::cout << "test_iterator" << std::endl;
-
-    using avl_t = avl_tree<int, std::less<int>>;
-    avl_t avl;
-
-    avl.insert(100);
-    avl.insert(50);
-    avl.insert(150);
-    avl.insert(250);
-    avl.insert(350);
-    avl.insert(450);
-    //
-
-    std::cout << "(";
-    for (const auto & node : avl) {
-        std::cout << node.key << ", ";
-    }
-    std::cout << ")" << std::endl;
-
-    //
-    auto current = avl.begin();
-    const auto end = avl.end();
-    std::cout << "(";
-    do {
-        std::cout << (*current).key << ", ";
-    } while(++current!=end);
-    std::cout << ")";
-}
-
+// move/copy
 void test_copy_and_move_ctor() {
     std::cout << "test_copy_and_move_ctor" << std::endl;
 
-    using avl_t = avl_tree<int, std::less<int>>;
-    avl_t avl1;
+    using dict = dictionary<int, int>;
+    dict d_1;
 
-    avl1.insert(100);
-    avl1.insert(50);
-    avl1.insert(150);
-    avl1.insert(250);
-    avl1.insert(350);
-    avl1.insert(450);
+    d_1.insert(pair<int, int>(50, 50));
+    d_1.insert(pair<int, int>(150, 150));
+    d_1.insert(pair<int, int>(250, 250));
+    d_1.insert(pair<int, int>(350, 350));
+    d_1.insert(pair<int, int>(450, 450));
+
+    std::cout << "- printing dictionary d1" << std::endl;
+    print_dictionary(d_1);
+
     //
 
-    std::cout << "- printing avl_1" << std::endl;
-    print_tree(avl1);
+    dict d2 = d_1;
 
-    // copy ctor of avl2
-    avl_t avl2 = avl1;
-    std::cout << "- printing copy-constructed avl_2" << std::endl;
-    print_tree(avl2);
+    std::cout << "- printing dictionary d2 after copy constructing with d1" << std::endl;
+    print_dictionary(d2);
 
-    // move ctor of avl3
-    avl_t avl3 = std::move(avl1);
-    std::cout << "- printing move-constructed avl_3 from avl_1" << std::endl;
-    print_tree(avl3);
-    std::cout << "- printing moved avl_1" << std::endl;
-    print_tree(avl1);
+    dict d3 = std::move(d_1);
+    std::cout << "- printing dictionary d3 after move constructing with d1" << std::endl;
+    print_dictionary(d3);
+    std::cout << "- printing dictionary d1" << std::endl;
+    print_dictionary(d_1);
 }
 
-void test_copy_and_move_assignment() {
-    std::cout << "test_copy_and_move_assignment" << std::endl;
+void test_copy_and_move_assign() {
+    std::cout << "test_copy_and_move_assign" << std::endl;
 
-    using avl_t = avl_tree<int>;
-    avl_t avl1, avl2, avl3;
+    using dict = dictionary<int, int>;
+    dict d1, d2, d3;
 
-    avl1.insert(100);
-    avl1.insert(50);
-    avl1.insert(150);
-    avl1.insert(250);
-    avl1.insert(350);
-    avl1.insert(450);
-    //
+    d1.insert(pair<int, int>(50, 50));
+    d1.insert(pair<int, int>(150, 150));
+    d1.insert(pair<int, int>(250, 250));
+    d1.insert(pair<int, int>(350, 350));
+    d1.insert(pair<int, int>(450, 450));
 
-    std::cout << "- printing avl_1" << std::endl;
-    print_tree(avl1);
+    std::cout << "- printing dictionary d1" << std::endl;
+    print_dictionary(d1);
 
-    // copy-assign of avl2
-    avl2 = avl1;
-    std::cout << "- printing copy-assigned avl_2" << std::endl;
-    print_tree(avl2);
+    d2 = d1;
 
-    // move-assigned of avl3
-    avl3 = std::move(avl1);
-    std::cout << "- printing move-assigned avl_3 from avl_1" << std::endl;
-    print_tree(avl3);
-    std::cout << "- printing moved avl_1" << std::endl;
-    print_tree(avl1);
+    std::cout << "- printing dictionary d2 after copy assign with d1" << std::endl;
+    print_dictionary(d2);
+
+    d3 = std::move(d1);
+    std::cout << "- printing dictionary d3 after move assign with d1" << std::endl;
+    print_dictionary(d3);
+    std::cout << "- printing dictionary d1" << std::endl;
+    print_dictionary(d1);
 }
-*/
 
 int main() {
     // modifiers
 //    test_insert();
+//    test_insert_with_range();
 
 //    test_erase_with_iterator();
 //    test_erase_with_key();
@@ -423,13 +328,10 @@ int main() {
 
     // Element Access
 //    test_at();
-    test_access_operator();
+//    test_access_operator();
 
-//    test_max_min();
-//    test_successor();
-//    test_predecessor();
-//    test_iterator();
+    // move/copy
 //    test_copy_and_move_ctor();
-//    test_copy_and_move_assignment();
+    test_copy_and_move_assign();
 }
 

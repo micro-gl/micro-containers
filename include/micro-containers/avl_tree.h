@@ -217,6 +217,7 @@ public:
     }
     // returns the new root
     const_iterator remove(const Key &k) {
+        // todo: take advantage of find node result to make remove_node faster
         const node_t * node = find_node(root(), k);
         const node_t * next_node = successor(node, root());
         _root = remove_node(root(), nullptr, k);

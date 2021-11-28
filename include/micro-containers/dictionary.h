@@ -26,12 +26,13 @@ struct throw_dictionary_out_of_range {};
 #endif
 
 /**
- * AVL Tree balanced tree, logarithmic complexity everything.
+ * Dictionary is an ordered associative data structure also known as orederd_map
  * Notes:
  * - Most algorithms use recursion, so there is a stack memory cost of O(log(n))
  * - This class is Allocator-Aware
  * @tparam Key the key type, that the tree stores
- * @tparam Compare _compare structure or lambda
+ * @tparam T The mapped value type of a key
+ * @tparam Compare compare structure or lambda for key
  * @tparam Allocator allocator type
  */
 template<class Key, class T,
@@ -110,20 +111,19 @@ public:
 
     dictionary(const dictionary & other, const Allocator & allocator) :
             dictionary(other.get_allocator()) {
-//        for(const auto & node : other)
-//            insert_node(node.key);
+        for(const auto & item : other) insert(item);
     }
     dictionary(const dictionary & other) : dictionary(other, other.get_allocator()) {}
     dictionary(dictionary && other, const Allocator & allocator) :
             dictionary(allocator) {
-//        const bool are_equal_allocators = _alloc==allocator;
-//        if(are_equal_allocators) {
-//            _root=other._root;
-//            other._root=nullptr;
-//        } else {
-//            for(const auto & node : other)
-//                insert_node(micro_containers::traits::move(node.key));
-//        }
+        const bool are_equal_allocators = _alloc==allocator;
+        if(are_equal_allocators) {
+            _tree=micro_containers::traits::move(other._tree);
+        } else {
+            for(const auto & item : other)
+                insert(micro_containers::traits::move(item));
+            other.clear();
+        }
     }
     dictionary(dictionary && other)  noexcept :
             dictionary(micro_containers::traits::move(other), other.get_allocator()) {}
@@ -131,24 +131,22 @@ public:
 
     dictionary & operator=(const dictionary & other) {
         if(this!=&(other)) {
-//            clear();
-//            for (const auto & node: other)
-//                insert_node(node.key);
+            clear();
+            for(const auto & item : other) insert(item);
         }
         return *this;
     }
     dictionary & operator=(dictionary && other) noexcept {
         if(this!=&(other)) {
-//            clear();
-//            const bool are_equal_allocators = _alloc==other.get_allocator();
-//            if(are_equal_allocators) {
-//                _root=other._root;
-//                other._root=nullptr;
-//            } else {
-//                for(const auto & node : other)
-//                    insert_node(micro_containers::traits::move(node.key));
-//                other.clear();
-//            }
+            clear();
+            const bool are_equal_allocators = _alloc==other.get_allocator();
+            if(are_equal_allocators) {
+                _tree=micro_containers::traits::move(other._tree);
+            } else {
+                for(const auto & item : other)
+                    insert(micro_containers::traits::move(item));
+                other.clear();
+            }
         }
         return *this;
     }
@@ -164,12 +162,12 @@ public:
     // lookup
     iterator find(const Key& key) {
         auto tree_iter = _tree.find(value_type(key, dictionary::DUMMY));
-        auto iter_dict = iterator (tree_iter);
+        auto iter_dict = iterator(tree_iter);
         return iter_dict;
     }
     const_iterator find(const Key& key) const {
         auto tree_iter = _tree.find(value_type(key, dictionary::DUMMY));
-        auto iter_dict = const_iterator (tree_iter);
+        auto iter_dict = const_iterator(tree_iter);
         return iter_dict;
     }
     bool contains(const Key& key) const {
@@ -180,16 +178,16 @@ public:
     T& at(const Key& key) {
         auto iter = find(key);
 #ifdef MICRO_CONTAINERS_ENABLE_THROW
-        if(iter==end())
-            throw throw_dictionary_out_of_range();
+        if(iter==end()) throw throw_dictionary_out_of_range();
 #endif
-        auto & value = *iter;
-        return value.second;
+        return (*iter).second;
     }
     const T& at(const Key& key) const {
         auto iter = find(key);
-        auto & value = *iter;
-        return value.second;
+#ifdef MICRO_CONTAINERS_ENABLE_THROW
+        if(iter==end()) throw throw_dictionary_out_of_range();
+#endif
+        return (*iter).second;
     }
     T & operator[](const Key & key) {
         auto iter = insert(value_type(key, dictionary::DUMMY)).first;
@@ -210,6 +208,12 @@ public:
     pair<iterator, bool> insert(value_type && value) {
         auto result = _tree.insert(micro_containers::traits::move(value));
         return pair<iterator, bool>(iterator(result.first), result.second);
+    }
+    template<class InputIt> void insert(InputIt first, InputIt last) {
+        InputIt current(first);
+        while(current!=last) {
+            insert(*current); current++;
+        }
     }
     unsigned erase(const Key& key) {
         auto tree_size = _tree.size();
