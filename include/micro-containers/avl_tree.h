@@ -194,8 +194,9 @@ public:
     const_iterator minimum() const { return const_iterator(minimum(root()), this); }
     const_iterator maximum() const { return const_iterator(maximum(root()), this); }
 
-    void clear() { while(!empty()) remove(root()->key); }
+    void clear() { while(!empty()) {_root = remove_node(root(), nullptr, root()->key);} _size=0; }
     // inserts, return the new root
+    // todo: make it proper for move semantics with template, that constructs
     insert_result insert(const Key &k) {
         node_t * new_node=nullptr; bool has_succeeded=false;
         _root = insert_node(root(), k, &new_node, has_succeeded);
@@ -217,9 +218,8 @@ public:
     // returns the new root
     const_iterator remove(const Key &k) {
         const node_t * node = find_node(root(), k);
-        const node_t * next_node= successor(node, root());
+        const node_t * next_node = successor(node, root());
         _root = remove_node(root(), nullptr, k);
-
         if(next_node) _size-=1;
         return const_iterator(next_node, this);
     }

@@ -20,6 +20,11 @@ struct dict_less {
     {return lhs < rhs;}
 };
 
+//#define MICRO_CONTAINERS_ENABLE_THROW
+#ifdef MICRO_CONTAINERS_ENABLE_THROW
+struct throw_dictionary_out_of_range {};
+#endif
+
 /**
  * AVL Tree balanced tree, logarithmic complexity everything.
  * Notes:
@@ -68,6 +73,8 @@ private:
         bool operator!=(iterator_t other) const {return !(*this == other);}
         value_reference_type operator*() const {return (*_pos); } // key in tree is pair<key, T> ;}
     };
+
+    static const T DUMMY;
 
 public:
     using tree_type = avl_tree<value_type, value_compare, Allocator>;
@@ -156,57 +163,69 @@ public:
 
     // lookup
     iterator find(const Key& key) {
-        auto tree_iter = _tree.find(value_type(key));
+        auto tree_iter = _tree.find(value_type(key, dictionary::DUMMY));
         auto iter_dict = iterator (tree_iter);
         return iter_dict;
     }
     const_iterator find(const Key& key) const {
-        auto tree_iter = _tree.find(value_type(key));
+        auto tree_iter = _tree.find(value_type(key, dictionary::DUMMY));
         auto iter_dict = const_iterator (tree_iter);
         return iter_dict;
     }
     bool contains(const Key& key) const {
-        return _tree.contains(value_type(key));
+        return _tree.contains(value_type(key, dictionary::DUMMY));
     }
 
     // element access
     T& at(const Key& key) {
-        auto iter = _tree.find(value_type(key));
+        auto iter = find(key);
+#ifdef MICRO_CONTAINERS_ENABLE_THROW
+        if(iter==end())
+            throw throw_dictionary_out_of_range();
+#endif
+        auto & value = *iter;
+        return value.second;
     }
     const T& at(const Key& key) const {
-        return _tree.find(value_type(key))->key.second;
+        auto iter = find(key);
+        auto & value = *iter;
+        return value.second;
     }
-    T& operator[](const Key & key) {
-        // todo
+    T & operator[](const Key & key) {
+        auto iter = insert(value_type(key, dictionary::DUMMY)).first;
+        return (*iter).second;
     }
-    T& operator[](Key && key) {
-        // todo
+    T & operator[](Key && key) {
+        auto iter = insert(value_type(micro_containers::traits::move(key),
+                                      dictionary::DUMMY)).first;
+        return (*iter).second;
     }
 
     // Modifiers
-    void clear() noexcept {
-        //todo
-    }
+    void clear() noexcept { _tree.clear(); }
     pair<iterator, bool> insert(const value_type& value) {
         auto result = _tree.insert(value);
         return pair<iterator, bool>(iterator(result.first), result.second);
     }
+    pair<iterator, bool> insert(value_type && value) {
+        auto result = _tree.insert(micro_containers::traits::move(value));
+        return pair<iterator, bool>(iterator(result.first), result.second);
+    }
     unsigned erase(const Key& key) {
-        static const auto V = T();
         auto tree_size = _tree.size();
-        auto tree_iter = _tree.remove(value_type(key, V));
+        auto tree_iter = _tree.remove(value_type(key, dictionary::DUMMY));
         return tree_size - _tree.size();
     }
     iterator erase(iterator pos) { return iterator(_tree.remove(*pos)); }
     iterator erase(const_iterator pos) { return iterator(_tree.remove(*pos)); }
     iterator erase(const_iterator first, const_iterator last) {
         const_iterator current(first);
-        while (current!=last) {
-            current=erase(current);
-        }
-//        for (iterator current = first; current!=last ; ++current) {
-//            erase(current);
-//        }
+        while (current!=last) current=erase(current);
         return current;
     }
 };
+
+template<class Key, class T,
+        class Compare,
+        class Allocator>
+const T dictionary<Key, T, Compare, Allocator>::DUMMY = T();

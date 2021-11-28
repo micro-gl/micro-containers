@@ -121,41 +121,111 @@ void test_erase_with_range_iterator() {
     std::cout << "- after erase" << std::endl;
     print_dictionary(d);
 }
+
 void test_clear() {
     std::cout << "test_clear" << std::endl;
 
-    using avl_t = avl_tree<int, std::less<int>>;
-    avl_t avl;
+    using dict = dictionary<int, int>;
+    dict d;
 
-    avl.insert(100);
-    avl.insert(50);
-    avl.insert(150);
-    avl.insert(250);
-    avl.insert(350);
-    avl.insert(450);
+    d.insert(pair<int, int>(50, 50));
+    d.insert(pair<int, int>(150, 150));
+    d.insert(pair<int, int>(250, 250));
+    d.insert(pair<int, int>(350, 350));
+    d.insert(pair<int, int>(450, 450));
     //
+    std::cout << "- dictionary" << std::endl;
+    print_dictionary(d);
 
-    avl.clear();
+    d.clear();
+    std::cout << "- after clear" << std::endl;
+    print_dictionary(d);
 }
 
-/*
 void test_find() {
     std::cout << "test_find" << std::endl;
 
-    using avl_t = avl_tree<int, std::less<int>>;
-    avl_t avl;
+    using dict = dictionary<int, int>;
+    dict d;
 
-    avl.insert(100);
-    avl.insert(50);
-    avl.insert(150);
-    avl.insert(250);
-    avl.insert(350);
-    avl.insert(450);
+    d.insert(pair<int, int>(50, 50));
+    d.insert(pair<int, int>(150, 150));
+    d.insert(pair<int, int>(250, 250));
+    d.insert(pair<int, int>(350, 350));
+    d.insert(pair<int, int>(450, 450));
     //
+    std::cout << "- dictionary" << std::endl;
+    print_dictionary(d);
 
-    const auto * node = avl.find(450);
+    auto iter = d.find(350);
+    std::cout << "- found 350: " << to_string(*iter) << std::endl;
+    iter = d.find(-5);
+    std::cout << "- found -5 ? iter==d.end(): " << to_string(iter==d.end()) << std::endl;
 }
 
+void test_contains() {
+    std::cout << "test_contains" << std::endl;
+
+    using dict = dictionary<int, int>;
+    dict d;
+
+    d.insert(pair<int, int>(50, 50));
+    d.insert(pair<int, int>(150, 150));
+    d.insert(pair<int, int>(250, 250));
+    d.insert(pair<int, int>(350, 350));
+    d.insert(pair<int, int>(450, 450));
+    //
+    std::cout << "- dictionary" << std::endl;
+    print_dictionary(d);
+
+    std::cout << "- found 350: " << to_string(d.contains(350)) << std::endl;
+    std::cout << "- found -5: " << to_string(d.contains(-5)) << std::endl;
+}
+
+// Element Access
+
+void test_at() {
+    std::cout << "test_at" << std::endl;
+
+    using dict = dictionary<int, int>;
+    dict d;
+
+    d.insert(pair<int, int>(50, 50));
+    d.insert(pair<int, int>(150, 150));
+    d.insert(pair<int, int>(250, 250));
+    d.insert(pair<int, int>(350, 350));
+    d.insert(pair<int, int>(450, 450));
+    //
+    std::cout << "- dictionary" << std::endl;
+    print_dictionary(d);
+
+    const auto & d_const = d;
+    auto & value_1 = d_const.at(150);
+
+    std::cout << "- at(150) is" << value_1 << std::endl;
+}
+
+void test_access_operator() {
+    std::cout << "test_access_operator" << std::endl;
+
+    using dict = dictionary<int, int>;
+    dict d;
+
+    d.insert(pair<int, int>(50, 50));
+    d.insert(pair<int, int>(150, 150));
+    d.insert(pair<int, int>(250, 250));
+    d.insert(pair<int, int>(350, 350));
+    d.insert(pair<int, int>(450, 450));
+    //
+    std::cout << "- dictionary" << std::endl;
+    print_dictionary(d);
+
+    d[150] = 5555;
+    auto & value_1 = d[150];
+
+    std::cout << "- dict[150] is " << d[150] << std::endl;
+}
+/*
 void test_max_min() {
     std::cout << "test_max_min" << std::endl;
 
@@ -338,16 +408,26 @@ void test_copy_and_move_assignment() {
 */
 
 int main() {
+    // modifiers
 //    test_insert();
+
 //    test_erase_with_iterator();
 //    test_erase_with_key();
-    test_erase_with_range_iterator();
+//    test_erase_with_range_iterator();
+
 //    test_clear();
+
+    // lookup
 //    test_find();
+//    test_contains();
+
+    // Element Access
+//    test_at();
+    test_access_operator();
+
 //    test_max_min();
 //    test_successor();
 //    test_predecessor();
-//    test_contains();
 //    test_iterator();
 //    test_copy_and_move_ctor();
 //    test_copy_and_move_assignment();
