@@ -16,49 +16,111 @@ std::string to_string(const dummy_t& value) {
     return os.str();
 }
 
+template<class U1, class U2>
+std::string to_string(const pair<U1, U2>& value, bool compact=false) {
+    std::ostringstream os;
+    if(!compact)
+        os << "\n{\n" << "  key: \n    " << to_string(value.first) << ", \n  value: \n    "
+           << to_string(value.second) << "\n},";
+    else
+        os << "{" << "key: " << to_string(value.first) << ", value: "
+            << to_string(value.second) << "}";
+    return os.str();
+}
+
 template<class Container>
-void print_tree(const Container & container) {
+void print_dictionary(const Container & container) {
     std::cout << "(";
     for (const auto & item : container) {
-        std::cout << to_string(item.key) << ", ";
+        std::cout << to_string(item, true) << ", ";
     }
     std::cout << ")" << std::endl;
 }
-#include <map>
+
+//#include <map>
 void test_insert() {
     std::cout << "test_insert" << std::endl;
 
-    using avl_t = avl_tree<int, std::less<int>>;
-    avl_t avl;
+    using dict = dictionary<int, int>;
+    dict d;
 
-    avl.insert(100);
-    avl.insert(50);
-    avl.insert(150);
-    avl.insert(250);
-    avl.insert(350);
-    avl.insert(450);
+    d.insert(pair<int, int>(50, 50));
+    d.insert(pair<int, int>(150, 150));
+    d.insert(pair<int, int>(250, 250));
+    d.insert(pair<int, int>(350, 350));
+    d.insert(pair<int, int>(450, 450));
+
+    std::cout << "- printing dictionary" << std::endl;
+    print_dictionary(d);
 }
 
-void test_remove() {
-    std::cout << "test_remove" << std::endl;
+void test_erase_with_iterator() {
+    std::cout << "test_erase_with_iterator" << std::endl;
 
-    using avl_t = avl_tree<int, std::less<int>>;
-    avl_t avl;
+    using dict = dictionary<int, int>;
+    dict d;
 
-    avl.insert(100);
-    avl.insert(50);
-    avl.insert(150);
-    avl.insert(250);
-    avl.insert(350);
-    avl.insert(450);
+    auto pos1 = d.insert(pair<int, int>(50, 50)).first;
+    auto pos2 = d.insert(pair<int, int>(150, 150)).first;
+    auto pos3 = d.insert(pair<int, int>(250, 250)).first;
+    d.insert(pair<int, int>(350, 350));
+    d.insert(pair<int, int>(450, 450));
+
+    std::cout << "- dictionary" << std::endl;
+    print_dictionary(d);
     //
-    avl.remove(100);
-    avl.remove(50);
-    avl.remove(150);
-    avl.remove(250);
-    avl.remove(350);
+
+    const auto iter_after_erase2 = d.erase(pos2);
+    // pos3 should be invalid
+    const auto iter_after_erase3 = d.erase(pos3);
+    bool invalid = iter_after_erase3==d.end();
+    std::cout << "- after erase" << std::endl;
+    print_dictionary(d);
 }
 
+void test_erase_with_key() {
+    std::cout << "test_erase_with_key" << std::endl;
+
+    using dict = dictionary<int, int>;
+    dict d;
+
+    d.insert(pair<int, int>(50, 50));
+    d.insert(pair<int, int>(150, 150));
+    d.insert(pair<int, int>(250, 250));
+    d.insert(pair<int, int>(350, 350));
+    d.insert(pair<int, int>(450, 450));
+
+    std::cout << "- dictionary" << std::endl;
+    print_dictionary(d);
+    //
+
+    d.erase(250);
+    d.erase(450);
+
+    std::cout << "- after erase of 250 and 450 keys" << std::endl;
+    print_dictionary(d);
+}
+
+void test_erase_with_range_iterator() {
+    std::cout << "test_erase_with_range_iterator" << std::endl;
+
+    using dict = dictionary<int, int>;
+    dict d;
+
+    d.insert(pair<int, int>(50, 50));
+    d.insert(pair<int, int>(150, 150));
+    d.insert(pair<int, int>(250, 250));
+    d.insert(pair<int, int>(350, 350));
+//    d.insert(pair<int, int>(450, 450));
+
+    std::cout << "- dictionary" << std::endl;
+    print_dictionary(d);
+    //
+    d.erase(d.begin(), d.begin());
+//    d.erase(d.begin(), ++d.begin());
+    std::cout << "- after erase" << std::endl;
+    print_dictionary(d);
+}
 void test_clear() {
     std::cout << "test_clear" << std::endl;
 
@@ -76,6 +138,7 @@ void test_clear() {
     avl.clear();
 }
 
+/*
 void test_find() {
     std::cout << "test_find" << std::endl;
 
@@ -272,10 +335,13 @@ void test_copy_and_move_assignment() {
     std::cout << "- printing moved avl_1" << std::endl;
     print_tree(avl1);
 }
+*/
 
 int main() {
-    test_insert();
-//    test_remove();
+//    test_insert();
+//    test_erase_with_iterator();
+//    test_erase_with_key();
+    test_erase_with_range_iterator();
 //    test_clear();
 //    test_find();
 //    test_max_min();

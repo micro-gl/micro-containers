@@ -25,8 +25,14 @@ struct pair {
     template< class U1 = T1, class U2 = T2 >
     constexpr pair(U1&& x, U2&& y) :
             first(micro_containers::traits::forward<U1>(x)),
-            second(micro_containers::traits::forward<U1>(x)) {};
+            second(micro_containers::traits::forward<U2>(y)) {};
     pair(const pair& p) = default;
     pair(pair&& p) = default;
+    pair& operator=(const pair& other) {
+        first = other.first;
+        second = other.second;
+        return *this;
+    }
+    pair& operator=(pair&& other) noexcept=default;
 };
 

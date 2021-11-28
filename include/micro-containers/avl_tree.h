@@ -54,9 +54,9 @@ private:
         iterator_t(const iterator_t<value_reference_type_t> & other) : _node(other._node), _tree(other._tree) {}
         explicit iterator_t(const node_t * start, const avl_tree * tree) : _node(start), _tree(tree) {}
         iterator_t& operator++() { _node=_tree->successor(_node); return *this;}
-        iterator_t& operator--() { _node=_tree->predecessor(_node); return *this;}
-        iterator_t operator++(int) {iterator_t retval(_node, _tree); ++(*this); return retval;}
-        iterator_t operator--(int) {iterator_t retval(_node, _tree); --(*this); return retval;}
+        iterator_t& operator--() { _node=_node ? _tree->predecessor(_node) : _tree->maximum(_tree->root()); return *this;}
+        iterator_t operator++(int) {iterator_t ret(_node, _tree); ++(*this); return ret;}
+        iterator_t operator--(int) {iterator_t ret(_node, _tree); --(*this); return ret;}
         bool operator==(iterator_t other) const {return _node == other._node;}
         bool operator!=(iterator_t other) const {return !(*this == other);}
         value_reference_type operator*() const {return (*ncn(_node)).key ;}
@@ -216,8 +216,11 @@ public:
     }
     // returns the new root
     const_iterator remove(const Key &k) {
-        node_t * next_node=nullptr;
-        _root = remove_node(root(), k, &next_node);
+        const node_t * node = find_node(root(), k);
+        const node_t * next_node= successor(node, root());
+        _root = remove_node(root(), nullptr, k);
+
+        if(next_node) _size-=1;
         return const_iterator(next_node, this);
     }
 
@@ -278,6 +281,17 @@ private:
         while (current && current->left) current = current->left;
         return current;
     }
+    struct pair_node { node_t * first, * second; };
+    static const pair_node minimum_with_parent(node_t * node, node_t * parent) {
+        node_t* current = node; pair_node result;
+        result.first=node; result.second=parent;
+        while (current && current->left) {
+            result.second = current;
+            current = current->left;
+            result.first = current;
+        }
+        return result;
+    }
     static const node_t* maximum(const node_t * node) {
         const node_t * iter = node;
         while (iter && iter->right) iter = iter->right;
@@ -305,6 +319,36 @@ private:
         } else { has_succeeded=false; *new_node=root; return root; } // duplicate keys
         return re_balance(root);
     }
+    pair_node swap_nodes(node_t * a, node_t * a_parent,
+                         node_t * b, node_t * b_parent) {
+        bool a_has_parent = a_parent != nullptr;
+        bool b_has_parent = b_parent != nullptr;
+        bool a_on_left = a_has_parent && a_parent->left == a;
+        bool b_on_left = b_has_parent && b_parent->left == b;
+        bool a_is_left_child_of_b = b && a && b->left == a;
+        bool a_is_right_child_of_b = b && a && b->right == a;
+        bool b_is_left_child_of_a = b && a && a->left == b;
+        bool b_is_right_child_of_a = b && a && a->right == b;
+        node_t * temp_left=a->left, * temp_right= a->right;
+        node_t * temp_p = a;
+        a->left = b->left; a->right = b->right;
+        b->left = temp_left; b->right = temp_right;
+        a = b; b = temp_p;
+        if(a_has_parent) {
+            if(a_is_left_child_of_b) b->left=a;
+            else if(a_is_right_child_of_b) b->right=a;
+            else if(a_on_left) a_parent->left=a;
+            else a_parent->right=a;
+        }
+        if(b_has_parent) {
+            if(b_is_left_child_of_a) a->left=b;
+            else if(b_is_right_child_of_a) a->right=b;
+            else if(b_on_left) b_parent->left=b;
+            else b_parent->right=b;
+        }
+        pair_node result; result.first=a; result.second=b;
+        return result;
+    }
     /**
      * Remove a root
      * @param root Tree root
@@ -312,25 +356,27 @@ private:
      * @param next_node Next root after removal
      * @return The new root
      */
-    node_t* remove_node(node_t* root, const Key &k, node_t ** next_node) {
+    node_t* remove_node(node_t* root, node_t* root_parent, const Key &k) {
         if(root == nullptr) return nullptr;
         else if(isPreceding(k, root->key)) {
-            root->left = remove_node(root->left, k, next_node);
+            root->left = remove_node(root->left, root, k);
         } else if(isPreceding(root->key, k)) {
-            root->right = remove_node(root->right, k, next_node);
+            root->right = remove_node(root->right, root, k);
         } else {
             if (root->left == nullptr || root->right == nullptr) {
                 //  if is leaf
                 auto * node_to_remove = root;
                 root = (root->left) ? root->left : root->right;
                 node_to_remove->~node_t();
-                _alloc.deallocate(node_to_remove); _size-=1;
+                _alloc.deallocate(node_to_remove);
             } else {
                 //  replace with successor = left most in right tree, and then remove_node successor
-                auto * successor_node = const_cast<node_t *>(minimum(root->right));
-                root->key = successor_node->key;
-                root->right = remove_node(root->right, root->key, next_node);
-                *next_node = root;
+                pair_node min = minimum_with_parent(const_cast<node_t *>(root->right),
+                                                           const_cast<node_t *>(root));
+                auto * successor = min.first; auto * og_successor_parent = min.second;
+                auto result = swap_nodes(root, root_parent, successor, og_successor_parent);
+                root = result.first;
+                root->right = remove_node(root->right, root, k);
             }
         }
         if (root) root = re_balance(root);

@@ -36,16 +36,15 @@ class dictionary {
 public:
     using key_type = Key;
     using mapped_type = T;
-    using value_type = pair<const Key, T>;
+    using value_type = pair<Key, T>;
     using key_compare = Compare;
     using allocator_type = Allocator;
     using reference = value_type &;
     using const_reference = const value_type &;
     using pointer = value_type *;
     using const_pointer = const value_type *;
-    class value_compare {
+    struct value_compare {
         Compare _compare;
-    protected:
         value_compare(Compare c) : _compare(c) {}
         bool operator()( const value_type& lhs, const value_type& rhs ) const
         { return _compare(lhs.first, rhs.first); }
@@ -57,17 +56,17 @@ private:
         tree_iterator _pos;
         dictionary * ncn(const dictionary * val) const
         { return const_cast<dictionary *>(val); }
-        template<class value_reference_type_t, tree_iterator>
-        iterator_t(const iterator_t<value_reference_type_t, tree_iterator> & other) :
+        template<class value_reference_type_t, class tree_iterator_t>
+        iterator_t(const iterator_t<value_reference_type_t, tree_iterator_t> & other) :
                 _pos(other._pos) {}
-        explicit iterator_t(const tree_iterator & start) : _pos(start) {}
+        explicit iterator_t(tree_iterator start) : _pos(start) {}
         iterator_t& operator++() { ++_pos; return *this;}
         iterator_t& operator--() { --_pos; return *this;}
         iterator_t operator++(int) {iterator_t retval(_pos); ++(*this); return retval;}
         iterator_t operator--(int) {iterator_t retval(_pos); --(*this); return retval;}
         bool operator==(iterator_t other) const {return _pos == other._pos;}
         bool operator!=(iterator_t other) const {return !(*this == other);}
-        value_reference_type operator*() const {return (*_pos).key; } // key in tree is pair<key, T> ;}
+        value_reference_type operator*() const {return (*_pos); } // key in tree is pair<key, T> ;}
     };
 
 public:
@@ -79,8 +78,8 @@ public:
     static constexpr unsigned long node_type_size = sizeof (node_type);
 
     // iterators
-    iterator begin() noexcept { return iterator{_tree.begin(), this}; }
-    const_iterator begin() const noexcept { return const_iterator{_tree.begin(), this}; }
+    iterator begin() noexcept { return iterator{_tree.begin()}; }
+    const_iterator begin() const noexcept { return const_iterator{_tree.begin()}; }
     const_iterator cbegin() const noexcept { return begin(); }
     iterator end() noexcept { return iterator(_tree.end()); }
     const_iterator end() const noexcept { return const_iterator(_tree.end()); }
@@ -155,9 +154,24 @@ public:
     bool empty() const noexcept { return _tree.empty(); }
     unsigned int size() const noexcept { return _tree.size(); }
 
+    // lookup
+    iterator find(const Key& key) {
+        auto tree_iter = _tree.find(value_type(key));
+        auto iter_dict = iterator (tree_iter);
+        return iter_dict;
+    }
+    const_iterator find(const Key& key) const {
+        auto tree_iter = _tree.find(value_type(key));
+        auto iter_dict = const_iterator (tree_iter);
+        return iter_dict;
+    }
+    bool contains(const Key& key) const {
+        return _tree.contains(value_type(key));
+    }
+
     // element access
     T& at(const Key& key) {
-        return _tree.find(value_type(key))->key.second;
+        auto iter = _tree.find(value_type(key));
     }
     const T& at(const Key& key) const {
         return _tree.find(value_type(key))->key.second;
@@ -174,6 +188,25 @@ public:
         //todo
     }
     pair<iterator, bool> insert(const value_type& value) {
-        _tree.insert_node(value);
+        auto result = _tree.insert(value);
+        return pair<iterator, bool>(iterator(result.first), result.second);
+    }
+    unsigned erase(const Key& key) {
+        static const auto V = T();
+        auto tree_size = _tree.size();
+        auto tree_iter = _tree.remove(value_type(key, V));
+        return tree_size - _tree.size();
+    }
+    iterator erase(iterator pos) { return iterator(_tree.remove(*pos)); }
+    iterator erase(const_iterator pos) { return iterator(_tree.remove(*pos)); }
+    iterator erase(const_iterator first, const_iterator last) {
+        const_iterator current(first);
+        while (current!=last) {
+            current=erase(current);
+        }
+//        for (iterator current = first; current!=last ; ++current) {
+//            erase(current);
+//        }
+        return current;
     }
 };
