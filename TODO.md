@@ -1,9 +1,10 @@
 - linked-list -> inherit node with value type so sentinel will not hold value-type
-- hash-table
+- oredered-set
+- hash-set
+- hash-map
 - heap
 - priority queue
 - queue
-- set
 - stack
 - sort placement new thing
 - decide weather every class is stand alone

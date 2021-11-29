@@ -16,6 +16,8 @@ namespace micro_containers {
         template< class T > struct remove_reference      {typedef T type;};
         template< class T > struct remove_reference<T&>  {typedef T type;};
         template< class T > struct remove_reference<T&&> {typedef T type;};
+        template <class T>
+        using remove_reference_t = typename remove_reference<T>::type;
 
         template <class _Tp> inline typename remove_reference<_Tp>::type&&
         move(_Tp&& __t) noexcept {
@@ -51,6 +53,8 @@ namespace micro_containers {
 
         template<bool, class _Tp = void> struct enable_if {};
         template<class _Tp> struct enable_if<true, _Tp> { typedef _Tp type; };
+        template< bool B, class T = void >
+        using enable_if_t = typename enable_if<B,T>::type;
 
         // integral constant
         template <class Tp, Tp _v>

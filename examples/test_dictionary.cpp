@@ -37,6 +37,22 @@ void print_dictionary(const Container & container) {
     std::cout << ")" << std::endl;
 }
 
+void test_insert_with_perfect_forward() {
+    std::cout << "test_insert_with_perfect_forward" << std::endl;
+
+    using dict = dictionary<int, int>;
+    dict d;
+
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
+
+    std::cout << "- printing dictionary" << std::endl;
+    print_dictionary(d);
+}
+
 void test_insert() {
     std::cout << "test_insert" << std::endl;
 
@@ -122,7 +138,8 @@ void test_erase_with_key() {
     print_dictionary(d);
     //
 
-    d.erase(250);
+//    d.erase(250);
+//    d.erase(450);
     d.erase(450);
 
     std::cout << "- after erase of 250 and 450 keys" << std::endl;
@@ -314,7 +331,8 @@ void test_copy_and_move_assign() {
 int main() {
     // modifiers
 //    test_insert();
-//    test_insert_with_range();
+//    test_insert_with_perfect_forward();
+    test_insert_with_range();
 
 //    test_erase_with_iterator();
 //    test_erase_with_key();
@@ -332,6 +350,6 @@ int main() {
 
     // move/copy
 //    test_copy_and_move_ctor();
-    test_copy_and_move_assign();
+//    test_copy_and_move_assign();
 }
 

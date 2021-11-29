@@ -209,11 +209,25 @@ public:
         auto result = _tree.insert(micro_containers::traits::move(value));
         return pair<iterator, bool>(iterator(result.first), result.second);
     }
-    template<class InputIt> void insert(InputIt first, InputIt last) {
+private:
+    template<class A, class B>
+    using match_t = micro_containers::traits::enable_if_t<
+            micro_containers::traits::is_same<A,
+                    micro_containers::traits::remove_reference_t<B>>::value>;
+    template<class A, class B>
+    using non_match_t = micro_containers::traits::enable_if_t<
+            !micro_containers::traits::is_same<A,
+                    micro_containers::traits::remove_reference_t<B>>::value>;
+public:
+    template<class InputIt, typename Non_Key = non_match_t<Key, InputIt>>
+    void insert(InputIt first, InputIt last) {
         InputIt current(first);
-        while(current!=last) {
-            insert(*current); current++;
-        }
+        while(current!=last) { insert(*current); current++; }
+    }
+    template<class KK, class TT, typename AA = match_t<KK, Key>, typename BB = match_t<TT, T>>
+    pair<iterator, bool> insert(KK && key, TT && value) {
+        return insert(value_type(micro_containers::traits::forward<KK>(key),
+                   micro_containers::traits::forward<TT>(value)));
     }
     unsigned erase(const Key& key) {
         auto tree_size = _tree.size();

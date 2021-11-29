@@ -219,9 +219,12 @@ public:
     const_iterator remove(const Key &k) {
         // todo: take advantage of find node result to make remove_node faster
         const node_t * node = find_node(root(), k);
-        const node_t * next_node = successor(node, root());
-        _root = remove_node(root(), nullptr, k);
-        if(next_node) _size-=1;
+        const bool has_found_node = node!=nullptr;
+        const node_t * next_node = nullptr;
+        if(has_found_node) {
+            next_node = successor(node, root());
+            _root = remove_node(root(), nullptr, k); _size-=1;
+        }
         return const_iterator(next_node, this);
     }
 
@@ -264,6 +267,7 @@ private:
     const node_t * predecessor(const node_t * node) const
     { return predecessor(node, root()); }
     const node_t * predecessor(const node_t * node, const node_t * root) const {
+        // find predecessor of node in root tree
         if(node==nullptr) return nullptr;
         if (node->left) return maximum(node->left);
         const node_t * pred = nullptr;
