@@ -1,5 +1,5 @@
 # micro{containers}
-**Fast**, super **slim**, **embeddable**, **headers files** only **`C++11`** containers library.  
+**Fast**, **Slim**, **Embeddable**, **Headers files** Only **`C++11`** containers library.  
 **No standard library is required**
 
 Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.github.io/docs/micro-containers)

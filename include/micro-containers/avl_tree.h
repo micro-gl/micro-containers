@@ -110,7 +110,7 @@ public:
             other._root=nullptr;
             other._size=0;
         } else {
-            for(const auto & key : other)
+            for(auto & key : other)
                 insert(micro_containers::traits::move(key));
             other.clear();
         }
@@ -135,7 +135,7 @@ public:
                 other._root=nullptr;
                 other._size=0;
             } else {
-                for(const auto & key : other)
+                for(auto & key : other)
                     insert(micro_containers::traits::move(key));
                 other.clear();
             }

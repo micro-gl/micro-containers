@@ -94,6 +94,7 @@ public:
     using index = unsigned int;
     using uint = unsigned int;
 
+private:
     struct node_t {
         node_t()=default;
         node_t(const value_type & $value) :
@@ -124,9 +125,21 @@ public:
         value_reference_type operator*() const {return _node->value ;}
     };
 
+public:
     using iterator = iterator_t<reference>;
     using const_iterator = iterator_t<const_reference>;
     using node_type = node_t;
+
+    const_reference back() const noexcept { return *(--end()); }
+    const_reference front() const noexcept { return *begin(); }
+    reference back() noexcept { return *(--end()); }
+    reference front() noexcept { return *begin(); }
+    iterator begin() noexcept {return iterator(_sentinel_node.next);}
+    const_iterator begin() const noexcept {return const_iterator(non_const_node(_sentinel_node.next));}
+    const_iterator cbegin() const noexcept {return const_iterator(non_const_node(_sentinel_node.next));}
+    iterator end() noexcept {return iterator(&_sentinel_node);}
+    const_iterator end() const noexcept {return const_iterator(non_const_node(&_sentinel_node));}
+    const_iterator cend() const noexcept {return const_iterator(non_const_node(&_sentinel_node));}
 
 private:
     using rebind_allocator_type = typename Allocator::template rebind<node_t>::other;
@@ -176,7 +189,7 @@ public:
             other.reset_sentinel();
             other._size = 0;
         } else {
-            for (const auto & item : other)
+            for (auto & item : other)
                 push_back(linked_list_traits::move(item));
             other.clear();
         }
@@ -214,7 +227,7 @@ public:
             other.reset_sentinel();
             other._size = 0;
         } else {
-            for (const auto & item : other)
+            for (auto & item : other)
                 push_back(linked_list_traits::move(item));
             other.clear();
         }
@@ -357,16 +370,6 @@ private:
 public:
 
     Allocator get_allocator() const noexcept { return Allocator(_alloc); }
-    const_reference back() const noexcept { return *(--end()); }
-    const_reference front() const noexcept { return *begin(); }
-    reference back() noexcept { return *(--end()); }
-    reference front() noexcept { return *begin(); }
     bool empty() const noexcept { return size()==0; }
     index size() const noexcept { return _size; }
-    iterator begin() noexcept {return iterator(_sentinel_node.next);}
-    const_iterator begin() const noexcept {return const_iterator(non_const_node(_sentinel_node.next));}
-    const_iterator cbegin() const noexcept {return const_iterator(non_const_node(_sentinel_node.next));}
-    iterator end() noexcept {return iterator(&_sentinel_node);}
-    const_iterator end() const noexcept {return const_iterator(non_const_node(&_sentinel_node));}
-    const_iterator cend() const noexcept {return const_iterator(non_const_node(&_sentinel_node));}
 };

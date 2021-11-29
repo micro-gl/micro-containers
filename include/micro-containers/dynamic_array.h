@@ -129,7 +129,7 @@ public:
     dynamic_array(dynamic_array && other, const Alloc & alloc) noexcept :
             dynamic_array(alloc) {
         reserve(other.size());
-        for (const auto & item : other) push_back(dynamic_array_traits::move(item));
+        for (auto & item : other) push_back(dynamic_array_traits::move(item));
     }
 
     dynamic_array(dynamic_array && other) noexcept : dynamic_array{other.get_allocator()} {
@@ -240,7 +240,7 @@ public:
         if(int(_current)>int(_cap-1)) {
             // copy the value, edge case if v belongs
             // to the dynamic array
-            const T vv = dynamic_array_traits::move(v);
+            T vv = dynamic_array_traits::move(v);
             alloc_(true);
             new(_data + _current++) T(dynamic_array_traits::move(vv));
         } else new(_data + _current++) T(dynamic_array_traits::move(v));

@@ -110,7 +110,7 @@ public:
         if(are_equal_allocators) {
             _tree=micro_containers::traits::move(other._tree);
         } else {
-            for(const auto & item : other)
+            for(auto & item : other)
                 insert(micro_containers::traits::move(item));
             other.clear();
         }
@@ -133,7 +133,7 @@ public:
             if(are_equal_allocators) {
                 _tree=micro_containers::traits::move(other._tree);
             } else {
-                for(const auto & item : other)
+                for(auto & item : other)
                     insert(micro_containers::traits::move(item));
                 other.clear();
             }

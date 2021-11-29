@@ -104,11 +104,8 @@ public:
                const Allocator & allocator=Allocator()) :
             _key_compare(comp), _alloc(allocator),
             _tree(value_compare(_key_compare), allocator) {}
-
     dictionary(const Allocator & allocator=Allocator()) :
             dictionary(Compare(), allocator) {};
-
-
     dictionary(const dictionary & other, const Allocator & allocator) :
             dictionary(other.get_allocator()) {
         for(const auto & item : other) insert(item);
@@ -120,7 +117,7 @@ public:
         if(are_equal_allocators) {
             _tree=micro_containers::traits::move(other._tree);
         } else {
-            for(const auto & item : other)
+            for(auto & item : other)
                 insert(micro_containers::traits::move(item));
             other.clear();
         }
@@ -143,7 +140,7 @@ public:
             if(are_equal_allocators) {
                 _tree=micro_containers::traits::move(other._tree);
             } else {
-                for(const auto & item : other)
+                for(auto & item : other)
                     insert(micro_containers::traits::move(item));
                 other.clear();
             }
