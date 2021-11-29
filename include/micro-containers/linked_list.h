@@ -125,6 +125,9 @@ private:
         value_reference_type operator*() const {return _node->value ;}
     };
 
+    node_t * non_const_node(const node_t * node) const
+    { return const_cast<node_t *>(node); }
+
 public:
     using iterator = iterator_t<reference>;
     using const_iterator = iterator_t<const_reference>;
@@ -140,6 +143,9 @@ public:
     iterator end() noexcept {return iterator(&_sentinel_node);}
     const_iterator end() const noexcept {return const_iterator(non_const_node(&_sentinel_node));}
     const_iterator cend() const noexcept {return const_iterator(non_const_node(&_sentinel_node));}
+    Allocator get_allocator() const noexcept { return Allocator(_alloc); }
+    bool empty() const noexcept { return size()==0; }
+    index size() const noexcept { return _size; }
 
 private:
     using rebind_allocator_type = typename Allocator::template rebind<node_t>::other;
@@ -240,13 +246,11 @@ private:
         ::new(node, micro::blah) node_t(value); // construct
         return node;
     }
-
     node_t * create_node(value_type && value) {
         node_t * node = _alloc.allocate(1);
         ::new(node, micro::blah) node_t(linked_list_traits::move(value)); // construct
         return node;
     }
-
     template<class... Args>
     node_t * create_node(Args &&... args) {
         node_t * node = _alloc.allocate(1);
@@ -267,18 +271,14 @@ private:
     }
 
 public:
-    // inserts
-
     iterator insert(const_iterator pos, const T & value) {
         // insert_node a new node before pos
         return insert_node_internal(pos, create_node(value));
     }
-
     iterator insert(const_iterator pos, T&& value) {
         // insert_node a new node before pos
         return insert_node_internal(pos, create_node(linked_list_traits::move(value)));
     }
-
     iterator insert(const_iterator pos, uint count, const T & value) {
         if(count==0) return pos;
         auto first_pos = insert(pos, value);
@@ -286,7 +286,6 @@ public:
             insert(pos, value);
         return first_pos;
     }
-
     template<class InputIt>
     iterator insert(const_iterator pos, InputIt first, InputIt last ) {
         iterator iter(pos); --iter;
@@ -305,7 +304,6 @@ private:
     }
 
 public:
-
     iterator erase(const_iterator pos) {
         if(pos==end()) return pos;
         auto * node_to_erase = pos._node;
@@ -330,26 +328,12 @@ public:
         return is_last_end ? cend() : last;
     }
 
-    void push_back(const T & value) {
-       insert(cend(), value);
-    }
-    void push_back(T && value) {
-        insert(cend(), linked_list_traits::move(value));
-    }
-    void push_front(const T & value) {
-        insert(cbegin(), value);
-    }
-    void push_front(T && value) {
-        insert(cbegin(), linked_list_traits::move(value));
-    }
-    void pop_back() {
-        if(empty()) return;
-        erase(--cend());
-    }
-    void pop_front() {
-        if(empty()) return;
-        erase(cbegin());
-    }
+    void push_back(const T & value) { insert(cend(), value); }
+    void push_back(T && value) { insert(cend(), linked_list_traits::move(value)); }
+    void push_front(const T & value) { insert(cbegin(), value); }
+    void push_front(T && value) { insert(cbegin(), linked_list_traits::move(value)); }
+    void pop_back() { if(empty()) return; erase(--cend()); }
+    void pop_front() { if(empty()) return; erase(cbegin()); }
 
     template<typename... Args>
     iterator emplace(const_iterator pos, Args&&... args)
@@ -362,14 +346,4 @@ public:
     { return emplace<Args...>(begin(), linked_list_traits::forward<Args>(args)...); }
 
     void clear() { while (size()) erase(--end()); reset_sentinel(); }
-
-private:
-    node_t * non_const_node(const node_t * node) const
-    { return const_cast<node_t *>(node); }
-
-public:
-
-    Allocator get_allocator() const noexcept { return Allocator(_alloc); }
-    bool empty() const noexcept { return size()==0; }
-    index size() const noexcept { return _size; }
 };
