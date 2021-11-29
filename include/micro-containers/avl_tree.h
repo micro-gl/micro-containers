@@ -39,8 +39,10 @@ public:
 private:
     struct node_t {
         Key key; int height; node_t *left, *right;
-        explicit node_t(const Key &k) : key(k), left(nullptr),
-                    right(nullptr), height(-1) {}
+        node_t(const Key &k) : key(k), left(nullptr),
+                                        right(nullptr), height(-1) {}
+        node_t(Key && k) : key(micro_containers::traits::move(k)), left(nullptr),
+                                        right(nullptr), height(-1) {}
     };
 
     template<class value_reference_type>
@@ -199,20 +201,20 @@ public:
     // todo: make it proper for move semantics with template, that constructs
     insert_result insert(const Key &k) {
         node_t * new_node=nullptr; bool has_succeeded=false;
-        _root = insert_node(root(), k, &new_node, has_succeeded);
+        _root = insert_node(root(), k, &new_node, has_succeeded, false);
         return insert_result(const_iterator(new_node, this), has_succeeded);
     }
     insert_result insert(Key &&k) {
         node_t * new_node=nullptr; bool has_succeeded=false;
-        _root = insert_node(root(), Key(micro_containers::traits::move(k)),
-                            &new_node, has_succeeded);
+        _root = insert_node(root(), k,
+                            &new_node, has_succeeded, true);
         return insert_result(const_iterator(new_node, this), has_succeeded);
     }
     template<class... Args>
     insert_result insert_emplace(Args&&... args) {
         node_t * new_node=nullptr; bool has_succeeded=false;
         _root = insert_node(root(), Key(micro_containers::traits::forward<Args>(args)...),
-                            &new_node, has_succeeded);
+                            &new_node, has_succeeded, true);
         return insert_result(const_iterator(new_node, this), has_succeeded);
     }
     // returns the new root
@@ -287,7 +289,7 @@ private:
         return current;
     }
     struct pair_node { node_t * first, * second; };
-    static const pair_node minimum_with_parent(node_t * node, node_t * parent) {
+    static pair_node minimum_with_parent(node_t * node, node_t * parent) {
         node_t* current = node; pair_node result;
         result.first=node; result.second=parent;
         while (current && current->left) {
@@ -311,16 +313,17 @@ private:
      * @return The new root of the tree
      */
     node_t * insert_node(node_t * root, const Key & k, // root is a sub tree root
-                         node_t ** new_node, bool & has_succeeded) {
+                         node_t ** new_node, bool & has_succeeded, const bool move_ctor) {
         if(root == nullptr) {
             auto * mem = _alloc.allocate(1);
-            ::new (mem) node_t(k);
+            if(move_ctor) ::new (mem) node_t(micro_containers::traits::move(const_cast<Key &>(k)));
+            else ::new (mem) node_t(k);
             has_succeeded=true; *new_node=mem;
             _size+=1; return mem;
         } else if(isPreceding(k, root->key)) {
-            root->left = insert_node(root->left, k, new_node, has_succeeded);
+            root->left = insert_node(root->left, k, new_node, has_succeeded, move_ctor);
         } else if(isSucceeding(k, root->key)) {
-            root->right = insert_node(root->right, k, new_node, has_succeeded);
+            root->right = insert_node(root->right, k, new_node, has_succeeded, move_ctor);
         } else { has_succeeded=false; *new_node=root; return root; } // duplicate keys
         return re_balance(root);
     }
