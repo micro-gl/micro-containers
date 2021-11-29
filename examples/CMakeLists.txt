@@ -16,6 +16,7 @@ set(libs micro-containers)
 
 set(SOURCES
         test_linked_list.cpp
+        test_forward_list.cpp
         test_avl_tree.cpp
         test_dictionary.cpp
         test_ordered_set.cpp
