@@ -22,7 +22,7 @@ set(SOURCES
         test_ordered_set.cpp
         )
 
-set(SOURCES_SHARED "")
+set(SOURCES_SHARED "" src/test_utils.h)
 
 foreach( testsourcefile ${SOURCES} )
     # I used node simple string replace, to cut off .cpp.

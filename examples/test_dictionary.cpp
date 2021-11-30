@@ -342,28 +342,26 @@ struct A<2> {
 
 int main() {
     // modifiers
-//    test_insert();
-//    test_insert_with_perfect_forward();
+    test_insert();
+    test_insert_with_perfect_forward();
     test_insert_with_range();
 
-    A<2> a;
-    a.foo();
-//    test_erase_with_iterator();
-//    test_erase_with_key();
-//    test_erase_with_range_iterator();
+    test_erase_with_iterator();
+    test_erase_with_key();
+    test_erase_with_range_iterator();
 
-//    test_clear();
+    test_clear();
 
     // lookup
-//    test_find();
-//    test_contains();
+    test_find();
+    test_contains();
 
     // Element Access
-//    test_at();
-//    test_access_operator();
+    test_at();
+    test_access_operator();
 
     // move/copy
-//    test_copy_and_move_ctor();
-//    test_copy_and_move_assign();
+    test_copy_and_move_ctor();
+    test_copy_and_move_assign();
 }
 

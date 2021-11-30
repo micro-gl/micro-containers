@@ -315,18 +315,18 @@ void test_pop_back_and_front() {
 
 int main() {
     test_clear();
-//    test_erase();
-//    test_pop_back_and_front();
-//    test_erase_range();
-//    test_assign_copy();
-//    test_assign_move();
-//    test_insert_single();
-//    test_insert_multi();
-//    test_insert_with_iterator();
-//    test_construct_copy();
-//    test_construct_move();
-//    test_push_front();
-//    test_back_and_front();
-//    test_emplace();
+    test_erase();
+    test_pop_back_and_front();
+    test_erase_range();
+    test_assign_copy();
+    test_assign_move();
+    test_insert_single();
+    test_insert_multi();
+    test_insert_with_iterator();
+    test_construct_copy();
+    test_construct_move();
+    test_push_front();
+    test_back_and_front();
+    test_emplace();
 }
 
