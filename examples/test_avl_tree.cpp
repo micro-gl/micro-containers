@@ -314,8 +314,9 @@ int main() {
 //    test_successor();
 //    test_predecessor();
 //    test_contains();
-//    test_iterator();
+    test_iterator();
 //    test_copy_and_move_ctor();
-    test_copy_and_move_assignment();
+//    test_copy_and_move_assignment();
+
 }
 

@@ -327,18 +327,6 @@ void test_copy_and_move_assign() {
     std::cout << "- printing dictionary d1" << std::endl;
     print_dictionary(d1);
 }
-#include <map>
-template<int INT>
-struct A {
-    int a=5;
-    void foo() {
-        std::cout <<"A " << a << "\n";
-    }
-};
-
-template<>
-struct A<2> {
-};
 
 int main() {
     // modifiers

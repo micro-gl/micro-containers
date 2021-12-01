@@ -20,6 +20,7 @@ set(SOURCES
         test_avl_tree.cpp
         test_dictionary.cpp
         test_ordered_set.cpp
+        test_hash_map.cpp
         )
 
 set(SOURCES_SHARED "" src/test_utils.h)

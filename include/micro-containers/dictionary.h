@@ -60,8 +60,6 @@ private:
     template<class value_reference_type, class tree_iterator>
     struct iterator_t {
         tree_iterator _pos;
-        dictionary * ncn(const dictionary * val) const
-        { return const_cast<dictionary *>(val); }
         template<class value_reference_type_t, class tree_iterator_t>
         iterator_t(const iterator_t<value_reference_type_t, tree_iterator_t> & other) :
                 _pos(other._pos) {}
@@ -187,12 +185,12 @@ public:
         return (*iter).second;
     }
     T & operator[](const Key & key) {
-        auto iter = insert(value_type(key, dictionary::DUMMY)).first;
+        auto iter = insert(value_type(key, T())).first;
         return (*iter).second;
     }
     T & operator[](Key && key) {
         auto iter = insert(value_type(micro_containers::traits::move(key),
-                                      dictionary::DUMMY)).first;
+                                      T())).first;
         return (*iter).second;
     }
 

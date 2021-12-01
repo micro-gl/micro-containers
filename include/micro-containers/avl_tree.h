@@ -47,21 +47,21 @@ private:
 
     template<class value_reference_type>
     struct iterator_t {
-        const node_t * _node; // nullptr _node is end signal
-        const avl_tree * _tree;
+        const node_t * _n; // node, nullptr node is end signal
+        const avl_tree * _t; // tree
 
         node_t * ncn(const node_t * node) const
         { return const_cast<node_t *>(node); }
         template<class value_reference_type_t>
-        iterator_t(const iterator_t<value_reference_type_t> & other) : _node(other._node), _tree(other._tree) {}
-        explicit iterator_t(const node_t * start, const avl_tree * tree) : _node(start), _tree(tree) {}
-        iterator_t& operator++() { _node=_tree->successor(_node); return *this;}
-        iterator_t& operator--() { _node=_node ? _tree->predecessor(_node) : _tree->maximum(_tree->root()); return *this;}
-        iterator_t operator++(int) {iterator_t ret(_node, _tree); ++(*this); return ret;}
-        iterator_t operator--(int) {iterator_t ret(_node, _tree); --(*this); return ret;}
-        bool operator==(iterator_t other) const {return _node == other._node;}
-        bool operator!=(iterator_t other) const {return !(*this == other);}
-        value_reference_type operator*() const {return (*ncn(_node)).key ;}
+        iterator_t(const iterator_t<value_reference_type_t> & o) : iterator_t(o._n, o._t) {}
+        explicit iterator_t(const node_t * n, const avl_tree * t) : _n(n), _t(t) {}
+        iterator_t& operator++() { _n=_t->successor(_n); return *this;}
+        iterator_t& operator--() { _n= _n ? _t->predecessor(_n) : _t->maximum_node(_t->root()); return *this;}
+        iterator_t operator++(int) {iterator_t ret(_n, _t); ++(*this); return ret;}
+        iterator_t operator--(int) {iterator_t ret(_n, _t); --(*this); return ret;}
+        bool operator==(iterator_t o) const {return _n == o._n;}
+        bool operator!=(iterator_t o) const {return !(*this == o);}
+        value_reference_type operator*() const {return (*ncn(_n)).key ;}
     };
 
 public:
@@ -77,7 +77,7 @@ public:
 
     // iterators
     iterator begin() noexcept { return iterator{minimum()}; }
-    const_iterator begin() const noexcept { return const_iterator{minimum()}; }
+    const_iterator begin() const noexcept { return minimum(); }
     const_iterator cbegin() const noexcept { return begin(); }
     iterator end() noexcept { return iterator{nullptr, this}; }
     const_iterator end() const noexcept { return const_iterator{nullptr, this}; }
@@ -193,8 +193,8 @@ public:
         return const_iterator(candidate, this);
     }
 
-    const_iterator minimum() const { return const_iterator(minimum(root()), this); }
-    const_iterator maximum() const { return const_iterator(maximum(root()), this); }
+    const_iterator minimum() const { return const_iterator(minimum_node(root()), this); }
+    const_iterator maximum() const { return const_iterator(maximum_node(root()), this); }
 
     void clear() { while(!empty()) {_root = remove_node(root(), nullptr, root()->key);} _size=0; }
     // inserts, return the new root
@@ -254,7 +254,7 @@ private:
     { return successor(node, root()); }
     const node_t * successor(const node_t * node, const node_t * root) const {
         if(node==nullptr) return nullptr;
-        if (node->right) return minimum(node->right);
+        if (node->right) return minimum_node(node->right);
         const node_t * succ = nullptr;
         // Start from root and search for successor down the tree
         while (root) {
@@ -271,7 +271,7 @@ private:
     const node_t * predecessor(const node_t * node, const node_t * root) const {
         // find predecessor of node in root tree
         if(node==nullptr) return nullptr;
-        if (node->left) return maximum(node->left);
+        if (node->left) return maximum_node(node->left);
         const node_t * pred = nullptr;
         // Start from root and search for predecessor down the tree
         while (root) {
@@ -283,13 +283,13 @@ private:
         }
         return pred;
     }
-    static const node_t * minimum(const node_t * node) {
+    static const node_t * minimum_node(const node_t * node) {
         const node_t* current = node;
         while (current && current->left) current = current->left;
         return current;
     }
     struct pair_node { node_t * first, * second; };
-    static pair_node minimum_with_parent(node_t * node, node_t * parent) {
+    static pair_node minimum_node_with_parent(node_t * node, node_t * parent) {
         node_t* current = node; pair_node result;
         result.first=node; result.second=parent;
         while (current && current->left) {
@@ -299,7 +299,7 @@ private:
         }
         return result;
     }
-    static const node_t* maximum(const node_t * node) {
+    static const node_t* maximum_node(const node_t * node) {
         const node_t * iter = node;
         while (iter && iter->right) iter = iter->right;
         return iter;
@@ -379,8 +379,8 @@ private:
                 _alloc.deallocate(node_to_remove);
             } else {
                 //  replace with successor = left most in right tree, and then remove_node successor
-                pair_node min = minimum_with_parent(const_cast<node_t *>(root->right),
-                                                           const_cast<node_t *>(root));
+                pair_node min = minimum_node_with_parent(const_cast<node_t *>(root->right),
+                                                         const_cast<node_t *>(root));
                 auto * successor = min.first; auto * og_successor_parent = min.second;
                 auto result = swap_nodes(root, root_parent, successor, og_successor_parent);
                 root = result.first;
