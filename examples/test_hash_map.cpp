@@ -11,7 +11,7 @@ std::string to_string(const pair<U1, U2>& value, bool compact=false) {
         os << "\n{\n" << "  key: \n    " << to_string(value.first) << ", \n  value: \n    "
            << to_string(value.second) << "\n},";
     else
-        os << "{" << "key: " << to_string(value.first) << ", value: "
+        os << "{" << "k: " << to_string(value.first) << ", v: "
             << to_string(value.second) << "}";
     return os.str();
 }
@@ -26,22 +26,34 @@ void print_hash_map(const Container & container) {
 }
 
 template<class Key, class T, class Hash, class Allocator>
-void print_hash_map_bucket(const typename hash_map<Key, T, Hash, Allocator>::bucket_type & bucket) {
-
+void print_hash_map_bucket(const hash_map<Key, T, Hash, Allocator> & c,
+                           const unsigned bucket_index) {
+    using bucket_t = const typename hash_map<Key, T, Hash, Allocator>::bucket_type &;
+    const auto & bucket = c.bucket_node(bucket_index);
+    std::cout << " == bucket #" << bucket_index << " has "
+              << c.bucket_size(bucket_index) << " items ==" << std::endl;
+    const auto * node_head = bucket.list;
+    std::cout << "(";
+    while(node_head) {
+        std::cout << to_string(node_head->key_value, true) << ", ";
+        node_head = node_head->next;
+    }
+    std::cout << ")";
 }
 
 template<class Key, class T, class Hash, class Allocator>
-void print_hash_map_info(const hash_map<Key, T, Hash, Allocator> & container) {
-    std::cout << std::endl << "- Hash map has: " << std::endl;
-    std::cout << "- " << container.size() << " items" << std::endl;
-    std::cout << "- " << container.bucket_count() << " buckets" << std::endl;
-    std::cout << "- " << container.load_factor() << " load factor" << std::endl;
-    std::cout << "- " << container.max_load_factor() << " max load factor" << std::endl;
-    std::cout << "(";
-    for (const auto & item : container) {
-        std::cout << to_string(item, true) << ", ";
+void print_hash_map_info(const hash_map<Key, T, Hash, Allocator> & c) {
+    std::cout << "== HASH-MAP INFO ==" << std::endl;
+    std::cout << " -- " << c.size() << " items in " << c.bucket_count() << " buckets";
+    std::cout << " -- load factor="  << c.load_factor();
+    std::cout << " -- max load factor="  << c.load_factor() << std::endl;
+    std::cout << "** Buckets Info" << std::endl;
+
+    for (unsigned ix = 0; ix < c.bucket_count(); ix++) {
+        print_hash_map_bucket(c, ix);
+        std::cout << std::endl;
     }
-    std::cout << ")" << std::endl;
+    std::cout << std::endl;
 }
 
 void test_emplace() {
@@ -364,7 +376,7 @@ void test_rehash() {
 
     using map = hash_map<int, int>;
     map d1(1);
-
+    d1.max_load_factor(3.0f);
     d1.insert(1, 50);
     d1.insert(2, 150);
     d1.insert(3, 250);
@@ -372,12 +384,10 @@ void test_rehash() {
     d1.insert(5, 450);
     d1.insert(6, 450);
 
-    std::cout << "- printing dictionary d1 with 1 bucket" << std::endl;
-    print_hash_map(d1);
+    print_hash_map_info(d1);
 
-    std::cout << "- printing dictionary d1 after rehash into 2 buckets" << std::endl;
     d1.rehash(2);
-    print_hash_map(d1);
+    print_hash_map_info(d1);
 }
 
 int main() {

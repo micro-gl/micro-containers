@@ -263,6 +263,7 @@ public:
         return bucket_index;
     }
     size_type max_bucket_count() const { return ~size_type(0); }
+    const bucket_type & bucket_node(const size_type index) const { return _buckets[index]; }
 
     // hash policy
     float load_factor() const { return float(size())/bucket_count(); }
