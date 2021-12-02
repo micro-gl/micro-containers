@@ -32,13 +32,12 @@ template<> struct hash<signed> {
 
 
 /**
- * Dictionary is an ordered associative data structure also known as orederd_map
+ * Hash-map is an un-ordered associative data structure also known as Hash-Table
  * Notes:
- * - Most algorithms use recursion, so there is a stack memory cost of O(log(n))
  * - This class is Allocator-Aware
  * @tparam Key the key type, that the tree stores
  * @tparam T The mapped value type of a key
- * @tparam Compare compare structure or lambda for key
+ * @tparam Hash The hash struct/function must implement `size_type operator()(const Key & key) const `
  * @tparam Allocator allocator type
  */
 template<class Key, class T,
@@ -72,7 +71,7 @@ private:
         value_type key_value;
     };
 
-    struct bucket_t {
+    struct bucket_t { //  bucket is a wrapper around a list
         bucket_t(node_t * $list) : list($list) {};
         node_t * list;
         bool is_empty() const { return list==nullptr; }
@@ -84,9 +83,14 @@ private:
         }
     };
 
+    struct node_query {
+        explicit node_query(const node_t * $node=nullptr, size_type $bucket_index=0) :
+                node($node), bucket_index($bucket_index) {}
+        const node_t * node; size_type bucket_index;
+    };
+
     static node_t * ncn(const node_t * node)
     { return const_cast<node_t *>(node); }
-
 
     template<class value_reference_type>
     struct iterator_t {
@@ -99,13 +103,11 @@ private:
         explicit iterator_t(const node_t * n, size_type bi, const hash_map * c) : _n(n), _bi(bi), _c(c) {}
         iterator_t& operator++() {
             auto q = _c->internal_node_successor(_n, _bi);
-            _n = q.node; _bi = q.bucket_index;
-            return *this;
+            _n = q.node; _bi = q.bucket_index; return *this;
         }
         iterator_t& operator--() {
-            auto q = _c->internal_node_predeccessor(_n, _bi);
-            _n = q.node; _bi = q.bucket_index;
-            return *this;
+            auto q = _c->internal_node_predecessor(_n, _bi);
+            _n = q.node; _bi = q.bucket_index; return *this;
         }
         iterator_t operator+(int val) {
             node_query q(_n, _bi);
@@ -117,11 +119,7 @@ private:
         iterator_t operator--(int) { iterator_t ret(_n, _bi, _c); --(*this); return ret; }
         bool operator==(iterator_t o) const { return _n==o._n; }
         bool operator!=(iterator_t o) const { return !(*this==o); }
-        value_reference_type operator*() const {
-            auto & aa =  (*ncn(_n)).key_value;
-            std::cout << to_string(aa, true);
-            return (*ncn(_n)).key_value;
-        }
+        value_reference_type operator*() const { return (*ncn(_n)).key_value; }
     };
 
 public:
@@ -133,35 +131,26 @@ public:
     using bucket_allocator = typename Allocator:: template rebind<bucket_type>::other;
     static constexpr unsigned long node_type_size = sizeof (node_type);
     static constexpr unsigned long bucket_type_size = sizeof (bucket_type);
-    static constexpr size_type DEFAULT_BUCKET_COUNT = 1;
+    static constexpr size_type DEFAULT_BUCKET_COUNT = 10;
 
-    //
-    struct node_query {
-        node_query(const node_t * $node=nullptr, size_type $bucket_index=0) :
-                node($node), bucket_index($bucket_index) {}
-        const node_t * node; size_type bucket_index;
-    };
-
-    node_query internal_node_predeccessor(const node_t * node, size_type bi) const {
+private:
+    node_query internal_node_predecessor(const node_t * node, size_type bi) const {
         node = node ? node->prev : node;
         while(node==nullptr && bi>0) {
             bi-=1; // prev bucket
             node=_buckets[bi].tail(); // try tail
         } // if _n==nullptr, this is end signal
-        node_query result;
-        result.node = node; result.bucket_index=bi;
-        return result;
+        if(node==nullptr) bi=bucket_count(); // make it wrap to end
+        return node_query(node, bi);
     }
-
     node_query internal_node_successor(const node_t * node, size_type bi) const {
         node= node ? node->next : node;
         while(node==nullptr && bi<bucket_count()) {
             bi+=1; // next bucket
-            node=_buckets[bi].list; // try head
+            node = bi<bucket_count() ? _buckets[bi].list : nullptr; // try head
         } // if _n==nullptr, this is end signal
         return node_query(node, bi);
     }
-
     node_query internal_node_first() const {
         // return first node in the leftmost non-empty bucket or nullptr indicating end
         node_query result;
@@ -175,9 +164,8 @@ public:
         result.bucket_index=_bucket_count; result.node=nullptr;
         return result;
     }
-
     node_query internal_node_last() const {
-        // return last node from the right non-empty bucket or nullptr indicating end
+        // return last node from the right non-empty bucket or nullptr indicating end when not found
         node_query result;
         for (int ix = _bucket_count-1; ix >=0; --ix) {
             auto * tail = _buckets[ix].tail();
@@ -190,6 +178,52 @@ public:
         return result;
     }
 
+    // the minimal buckets count required to keep load factor below max load factor
+    size_type minimal_required_buckets_count_for_valid_load_factor() {
+        const auto suggested = size_type(float(size())/max_load_factor());
+        return suggested ? suggested : DEFAULT_BUCKET_COUNT;
+    }
+    node_t * internal_insert_node_at_front_of_bucket(node_t * node, const size_type bucket_index) {
+        auto & bucket = _buckets[bucket_index];
+        auto * head = bucket.list;
+        node->next = head; node->prev=nullptr;
+        if(head) head->prev = node;
+        bucket.list = node;
+        return node;
+    }
+    node_query internal_insert_node(node_t * node) {
+        const auto hash = _hasher(node->key_value.first);
+        size_type bucket_index = hash % _bucket_count;
+        return node_query(internal_insert_node_at_front_of_bucket(node, bucket_index),
+                          bucket_index);
+    }
+    iterator internal_erase(const Key & key) {
+        auto iter = find(key);
+        const bool found = iter!=end();
+        if(!found) return end();
+        auto iter_next = iter+1;
+        // re-wire
+        auto * node = const_cast<node_t *>(iter._n);
+        auto bi = iter._bi;
+        auto & bucket = _buckets[bi];
+        // node is head
+        if(node == bucket.head()) {
+            bucket.list = node->next;
+            if(bucket.list) bucket.list->prev = nullptr;
+        } else {
+            node->prev->next = node->next;
+            if(node->next) // in case it is not tail
+                node->next->prev = node->prev;
+        }
+        node->prev=node->next=nullptr;
+        // destroy and deallocate
+        node->~node_t();
+        _alloc_node.deallocate(node);
+        _size-=1;
+        return iter_next;
+    }
+
+public:
     // iterators
     iterator begin() noexcept {
         auto q=internal_node_first(); return iterator(q.node, q.bucket_index, this);
@@ -210,19 +244,16 @@ private:
     // hash
     hasher _hasher;
     float _max_load_factor;
-    // other
+    // allocators
     node_allocator _alloc_node;
     bucket_allocator _alloc_bucket;
 
 public:
-
     // bucket interface
     size_type bucket_size(size_type n) const {
         const auto * bucket = _buckets[n].list;
         size_type count = 0;
-        while(bucket) {
-            ++count; bucket=bucket->next;
-        }
+        while(bucket) { ++count; bucket=bucket->next; }
         return count;
     }
     size_type bucket_count() const { return _bucket_count; }
@@ -247,26 +278,6 @@ public:
 
     bool requires_rehash() const { return load_factor()>max_load_factor(); }
 
-    // the minimal buckets count required to keep load factor below max load factor
-    size_type minimal_required_buckets_count_for_valid_load_factor() {
-        const auto suggested = size_type(float(size())/max_load_factor());
-        return suggested ? suggested : DEFAULT_BUCKET_COUNT;
-    }
-
-    node_t * internal_insert_node_at_front_of_bucket(node_t * node, const size_type bucket_index) {
-        auto & bucket = _buckets[bucket_index];
-        auto * head = bucket.list;
-        node->next = head; node->prev=nullptr;
-        if(head) head->prev = node;
-        bucket.list = node;
-        return node;
-    }
-    node_query internal_insert_node(node_t * node) {
-        const auto hash = _hasher(node->key_value.first);
-        size_type bucket_index = hash % _bucket_count;
-        return node_query(internal_insert_node_at_front_of_bucket(node, bucket_index),
-                          bucket_index);
-    }
     void rehash(size_type new_buckets_count) {
         bucket_type * old_buckets = _buckets;
         const size_type old_buckets_count = _bucket_count;
@@ -297,7 +308,6 @@ public:
                 new_bucket.list = removed_node;
             }
         }
-
         // destruct and deallocate old bucket
         for (int ix = 0; ix < old_buckets_count; ++ix)
             old_buckets[ix].~bucket_t();
@@ -306,8 +316,6 @@ public:
         _buckets = new_buckets;
         _bucket_count = new_buckets_count;
     }
-
-    hasher hash_function() const { return _hasher; }
 
     hash_map(size_type bucket_count,
              const Hash& hash = Hash(),
@@ -324,7 +332,8 @@ public:
     hash_map(InputIt first, InputIt last, size_type bucket_count,
              const Hash& hash = Hash(), const Allocator& alloc = Allocator() )
             : hash_map(bucket_count, hash, alloc) {
-        // todo :  iterate
+        InputIt current(first);
+        while(current!=last) { insert(*current); ++current; }
     }
     template< class InputIt >
     hash_map(InputIt first, InputIt last, size_type bucket_count,
@@ -363,6 +372,8 @@ public:
     hash_map & operator=(const hash_map & other) {
         if(this==&other) return *this;
         clear();
+        _max_load_factor = other.max_load_factor();
+        rehash(other.bucket_count());
         for(const auto & item : other) insert(item);
         return *this;
     }
@@ -388,6 +399,7 @@ public:
     }
 
     Allocator get_allocator() const { return Allocator(_alloc_node); }
+    hasher hash_function() const { return _hasher; }
 
     // capacity
     bool empty() const noexcept { return _size==0; }
@@ -406,11 +418,7 @@ public:
         const auto & bucket = _buckets[bi];
         const node_t * iter = bucket.list;
         while(iter && !(iter->key_value.first==key)) { iter=iter->next; }
-        return iter ? iterator(iter, bi, this) : end();
-    }
-    bucket_t & internal_bucket_of_key(const Key & key) const {
-        const auto bi = bucket(key);
-        return _buckets[bi];
+        return iter ? const_iterator(iter, bi, this) : end();
     }
     bool contains(const Key& key) const {
         return find(key)!=end();
@@ -506,32 +514,6 @@ public:
         return insert(value_type(micro_containers::traits::forward<KK>(key),
                    micro_containers::traits::forward<TT>(value)));
     }
-    iterator internal_erase(const Key & key) {
-        auto iter = find(key);
-        const bool found = iter!=end();
-        if(!found) return end();
-        auto iter_next = iter+1;
-        // re-wire
-        auto * node = const_cast<node_t *>(iter._n);
-        auto bi = iter._bi;
-        auto & bucket = _buckets[bi];
-        // node is head
-        if(node == bucket.head()) {
-            bucket.list = node->next;
-            if(bucket.list) bucket.list->prev = nullptr;
-        } else {
-            node->prev->next = node->next;
-            if(node->next) // in case it is not tail
-                node->next->prev = node->prev;
-        }
-        node->prev=node->next=nullptr;
-
-        // destroy and deallocate
-        node->~node_t();
-        _alloc_node.deallocate(node);
-        _size-=1;
-        return iter_next;
-    }
 
     size_type erase(const Key& key) {
         auto iter_next = internal_erase(key);
@@ -543,5 +525,9 @@ public:
         const_iterator current(first);
         while (current!=last) current=erase(current);
         return current;
+    }
+    template< class... Args >
+    pair<iterator, bool> emplace(Args&&... args) {
+        return insert(value_type(micro_containers::traits::forward<Args>(args)...));
     }
 };

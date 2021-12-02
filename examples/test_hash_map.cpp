@@ -20,10 +20,42 @@ template<class Container>
 void print_hash_map(const Container & container) {
     std::cout << "(";
     for (const auto & item : container) {
-        std::cout << "\n one";
         std::cout << to_string(item, true) << ", ";
     }
     std::cout << ")" << std::endl;
+}
+
+template<class Key, class T, class Hash, class Allocator>
+void print_hash_map_bucket(const typename hash_map<Key, T, Hash, Allocator>::bucket_type & bucket) {
+
+}
+
+template<class Key, class T, class Hash, class Allocator>
+void print_hash_map_info(const hash_map<Key, T, Hash, Allocator> & container) {
+    std::cout << std::endl << "- Hash map has: " << std::endl;
+    std::cout << "- " << container.size() << " items" << std::endl;
+    std::cout << "- " << container.bucket_count() << " buckets" << std::endl;
+    std::cout << "- " << container.load_factor() << " load factor" << std::endl;
+    std::cout << "- " << container.max_load_factor() << " max load factor" << std::endl;
+    std::cout << "(";
+    for (const auto & item : container) {
+        std::cout << to_string(item, true) << ", ";
+    }
+    std::cout << ")" << std::endl;
+}
+
+void test_emplace() {
+    print_test_header("test_emplace");
+
+    using map = hash_map<int, int>;
+    map d;
+
+    d.emplace(50, 50);
+    d.emplace(150, 150);
+    d.emplace(250, 250);
+
+    std::cout << "- printing map" << std::endl;
+    print_hash_map(d);
 }
 
 void test_insert() {
@@ -43,7 +75,7 @@ void test_insert() {
 }
 
 void test_insert_with_perfect_forward() {
-    std::cout << "test_insert_with_perfect_forward" << std::endl;
+    print_test_header("test_insert_with_perfect_forward");
 
     using map = hash_map<int, int>;
     map d;
@@ -59,7 +91,7 @@ void test_insert_with_perfect_forward() {
 }
 
 void test_insert_with_range() {
-    std::cout << "test_insert_with_range" << std::endl;
+    print_test_header("test_insert_with_range");
 
     using map = hash_map<int, int>;
     map d_1, d_2;
@@ -94,17 +126,17 @@ void test_clear() {
     map d;
 
     d.insert(50, 50);
-//    d.insert(150, 150);
-//    d.insert(250, 250);
-//    d.insert(350, 350);
-//    d.insert(450, 450);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
 
     std::cout << "- printing map" << std::endl;
     print_hash_map(d);
 
-//    std::cout << "- printing map after clear" << std::endl;
-//    d.clear();
-//    print_hash_map(d);
+    std::cout << "- printing map after clear" << std::endl;
+    d.clear();
+    print_hash_map(d);
 }
 
 void test_erase_with_key() {
@@ -195,22 +227,185 @@ void test_find() {
     std::cout << "- found -5 ? iter==d.end(): " << to_string(iter==d.end()) << std::endl;
 }
 
+void test_contains() {
+    print_test_header("test_contains");
+
+    using dict = hash_map<int, int>;
+    dict d;
+
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
+    //
+    std::cout << "- dictionary" << std::endl;
+    print_hash_map(d);
+
+    for (const auto & item : d) {
+        std::cout << "- does map contains " << to_string(item.first)
+                  << " ? " << d.contains(item.first) << std::endl;
+    }
+
+    std::cout << "- does map contains " << 5
+              << " ? " << d.contains(5) << std::endl;
+
+}
+
+// Element Access
+
+void test_at() {
+    print_test_header("test_at");
+
+    using dict = hash_map<int, int>;
+    dict d;
+
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
+    //
+    std::cout << "- dictionary" << std::endl;
+    print_hash_map(d);
+
+    const auto & d_const = d;
+    auto & value_1 = d_const.at(150);
+    d.at(250) = 2500;
+
+    std::cout << "- at(150) is " << value_1 << std::endl;
+    std::cout << "-  d.at(250) = 2500 is " << d.at(250) << std::endl;
+}
+
+void test_access_operator() {
+    print_test_header("test_access_operator");
+
+    using dict = hash_map<int, int>;
+    dict d;
+
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
+    //
+    std::cout << "- dictionary" << std::endl;
+    print_hash_map(d);
+
+    d[150] = 151;
+
+    std::cout << "- d[150] = 151 is updated and reports " << d[150] << std::endl;
+
+    std::cout << "- dictionary" << std::endl;
+    print_hash_map(d);
+
+}
+
+// assign and ctors
+// move/copy
+void test_copy_and_move_ctor() {
+    print_test_header("test_copy_and_move_ctor");
+
+    using dict = hash_map<int, int>;
+    dict d1;
+
+    d1.insert(50, 50);
+    d1.insert(150, 150);
+    d1.insert(250, 250);
+    d1.insert(350, 350);
+    d1.insert(450, 450);
+
+    std::cout << "- printing dictionary d1" << std::endl;
+    print_hash_map(d1);
+
+    //
+
+    dict d2 = d1;
+
+    std::cout << "- printing dictionary d2 after copy constructing with d1" << std::endl;
+    print_hash_map(d2);
+
+    dict d3 = std::move(d1);
+    std::cout << "- printing dictionary d3 after move constructing with d1" << std::endl;
+    print_hash_map(d3);
+    std::cout << "- printing dictionary d1" << std::endl;
+    print_hash_map(d1);
+}
+
+void test_copy_and_move_assign() {
+    print_test_header("test_copy_and_move_assign");
+
+    using map = hash_map<int, int>;
+    map d1, d2, d3;
+
+    d1.insert(50, 50);
+    d1.insert(150, 150);
+    d1.insert(250, 250);
+    d1.insert(350, 350);
+    d1.insert(450, 450);
+
+    std::cout << "- printing dictionary d1" << std::endl;
+    print_hash_map(d1);
+
+    d2 = d1;
+
+    std::cout << "- printing dictionary d2 after copy assign with d1" << std::endl;
+    print_hash_map(d2);
+
+    d3 = std::move(d1);
+    std::cout << "- printing dictionary d3 after move assign with d1" << std::endl;
+    print_hash_map(d3);
+    std::cout << "- printing dictionary d1" << std::endl;
+    print_hash_map(d1);
+}
+
+void test_rehash() {
+    print_test_header("test_rehash");
+
+    using map = hash_map<int, int>;
+    map d1(1);
+
+    d1.insert(1, 50);
+    d1.insert(2, 150);
+    d1.insert(3, 250);
+    d1.insert(4, 350);
+    d1.insert(5, 450);
+    d1.insert(6, 450);
+
+    std::cout << "- printing dictionary d1 with 1 bucket" << std::endl;
+    print_hash_map(d1);
+
+    std::cout << "- printing dictionary d1 after rehash into 2 buckets" << std::endl;
+    d1.rehash(2);
+    print_hash_map(d1);
+}
+
 int main() {
     // modifiers
 //    test_insert();
 //    test_insert_with_perfect_forward();
 //    test_insert_with_range();
+//
+//    test_emplace();
 
 //    test_erase_with_key();
 //    test_erase_with_range_iterator();
 //    test_erase_with_iterator();
-
-    test_clear();
+//
 //    test_clear();
 
     // lookup
 //    test_find();
 //    test_contains();
 
+    // element access
+//    test_at();
+//    test_access_operator();
+
+    // assign and ctors
+//    test_copy_and_move_ctor();
+//    test_copy_and_move_assign();
+
+    test_rehash();
 }
 
