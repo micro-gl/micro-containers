@@ -117,7 +117,11 @@ private:
         iterator_t operator--(int) { iterator_t ret(_n, _bi, _c); --(*this); return ret; }
         bool operator==(iterator_t o) const { return _n==o._n; }
         bool operator!=(iterator_t o) const { return !(*this==o); }
-        value_reference_type operator*() const { return (*ncn(_n)).key_value; }
+        value_reference_type operator*() const {
+            auto & aa =  (*ncn(_n)).key_value;
+            std::cout << to_string(aa, true);
+            return (*ncn(_n)).key_value;
+        }
     };
 
 public:
@@ -504,15 +508,15 @@ public:
     }
     iterator internal_erase(const Key & key) {
         auto iter = find(key);
-        const bool found = iter.second;
+        const bool found = iter!=end();
         if(!found) return end();
         auto iter_next = iter+1;
         // re-wire
-        auto * node = iter._n;
+        auto * node = const_cast<node_t *>(iter._n);
         auto bi = iter._bi;
         auto & bucket = _buckets[bi];
         // node is head
-        if(node == bucket.is_head()) {
+        if(node == bucket.head()) {
             bucket.list = node->next;
             if(bucket.list) bucket.list->prev = nullptr;
         } else {
