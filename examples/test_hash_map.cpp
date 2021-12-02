@@ -1,6 +1,3 @@
-#include <iostream>
-#include <sstream>
-
 #include "src/test_utils.h"
 #include <micro-containers/hash_map.h>
 
@@ -46,7 +43,7 @@ void print_hash_map_info(const hash_map<Key, T, Hash, Allocator> & c) {
     std::cout << "== HASH-MAP INFO ==" << std::endl;
     std::cout << " -- " << c.size() << " items in " << c.bucket_count() << " buckets";
     std::cout << " -- load factor="  << c.load_factor();
-    std::cout << " -- max load factor="  << c.load_factor() << std::endl;
+    std::cout << " -- max load factor="  << c.max_load_factor() << std::endl;
     std::cout << "** Buckets Info" << std::endl;
 
     for (unsigned ix = 0; ix < c.bucket_count(); ix++) {
@@ -376,7 +373,6 @@ void test_rehash() {
 
     using map = hash_map<int, int>;
     map d1(1);
-    d1.max_load_factor(3.0f);
     d1.insert(1, 50);
     d1.insert(2, 150);
     d1.insert(3, 250);
@@ -386,36 +382,61 @@ void test_rehash() {
 
     print_hash_map_info(d1);
 
+    d1.max_load_factor(3.0f);
     d1.rehash(2);
     print_hash_map_info(d1);
 }
 
+void test_rehash_2() {
+    print_test_header("test_rehash_2");
+
+    using map = hash_map<int, int>;
+    map d1(1);
+    d1.insert(1, 50);
+    print_hash_map_info(d1);
+    d1.insert(2, 150);
+    print_hash_map_info(d1);
+    d1.insert(3, 250);
+    print_hash_map_info(d1);
+    d1.insert(4, 350);
+    print_hash_map_info(d1);
+    d1.insert(5, 450);
+    print_hash_map_info(d1);
+    d1.insert(6, 450);
+    print_hash_map_info(d1);
+
+//    d1.max_load_factor(3.0f);
+//    d1.rehash(2);
+//    print_hash_map_info(d1);
+}
+
 int main() {
     // modifiers
-//    test_insert();
-//    test_insert_with_perfect_forward();
-//    test_insert_with_range();
-//
-//    test_emplace();
+    test_insert();
+    test_insert_with_perfect_forward();
+    test_insert_with_range();
 
-//    test_erase_with_key();
-//    test_erase_with_range_iterator();
-//    test_erase_with_iterator();
+    test_emplace();
 //
-//    test_clear();
+    test_erase_with_key();
+    test_erase_with_range_iterator();
+    test_erase_with_iterator();
+
+    test_clear();
 
     // lookup
-//    test_find();
-//    test_contains();
+    test_find();
+    test_contains();
 
     // element access
-//    test_at();
-//    test_access_operator();
+    test_at();
+    test_access_operator();
 
     // assign and ctors
-//    test_copy_and_move_ctor();
-//    test_copy_and_move_assign();
+    test_copy_and_move_ctor();
+    test_copy_and_move_assign();
 
-    test_rehash();
+//    test_rehash();
+    test_rehash_2();
 }
 

@@ -69,6 +69,10 @@ private:
         node_t * prev;
         node_t * next;
         value_type key_value;
+        const Key & key() const { return key_value.first; }
+        Key & key() { return key_value.first; }
+        const T & value() const { return key_value.second; }
+        T & value() { return key_value.second; }
     };
 
     struct bucket_t { //  bucket is a wrapper around a list
@@ -181,7 +185,7 @@ private:
     // the minimal buckets count required to keep load factor below max load factor
     size_type minimal_required_buckets_count_for_valid_load_factor() {
         const auto suggested = size_type(float(size())/max_load_factor());
-        return suggested ? suggested : DEFAULT_BUCKET_COUNT;
+        return suggested ? suggested : 1;//DEFAULT_BUCKET_COUNT;
     }
     node_t * internal_insert_node_at_front_of_bucket(node_t * node, const size_type bucket_index) {
         auto & bucket = _buckets[bucket_index];
@@ -194,8 +198,15 @@ private:
     node_query internal_insert_node(node_t * node) {
         const auto hash = _hasher(node->key_value.first);
         size_type bucket_index = hash % _bucket_count;
-        return node_query(internal_insert_node_at_front_of_bucket(node, bucket_index),
+        auto nq = node_query(internal_insert_node_at_front_of_bucket(node, bucket_index),
                           bucket_index);
+        _size+=1;
+        if(requires_rehash()) {
+            rehash(minimal_required_buckets_count_for_valid_load_factor()*size_type(2));
+            // rewrite node query, because the bucket index might have changed
+            nq.bucket_index = bucket(node->key());
+        }
+        return nq;
     }
     iterator internal_erase(const Key & key) {
         auto iter = find(key);
@@ -271,7 +282,7 @@ public:
     void max_load_factor(float ml) {
         _max_load_factor = ml;
         const auto factor = load_factor();
-        if(factor<_max_load_factor) return;
+        if(load_factor()<max_load_factor()) return;
         // else, let's rehash
         size_type new_buckets_count = minimal_required_buckets_count_for_valid_load_factor();
         rehash(new_buckets_count);
@@ -467,9 +478,8 @@ public:
                 _alloc_node.deallocate(removed_node);
             }
         }
-        // destroy buckets and deallocate
-        for (int ix = 0; ix < bucket_count; ++ix)
-            _buckets[ix].~bucket_t(); // this is useless, trivial destructor
+        // destroy buckets and deallocate, this is useless, trivial destructor
+        for (int ix = 0; ix < bucket_count; ++ix) _buckets[ix].~bucket_t();
         _alloc_bucket.deallocate(_buckets);
         // reset values
         _buckets=nullptr; _bucket_count=_size=0;
@@ -481,7 +491,7 @@ public:
             if (iter!=end()) return pair<iterator, bool>(iter, false);
         }
         auto * node = _alloc_node.allocate(1);
-        ::new (node) node_t(value); _size+=1;
+        ::new (node) node_t(value);
         node_query q = internal_insert_node(node);
         return pair<iterator, bool>(iterator(q.node, q.bucket_index, this), true);
     }
@@ -491,7 +501,7 @@ public:
             if (iter!=end()) return pair<iterator, bool>(iter, false);
         }
         auto * node = _alloc_node.allocate(1);
-        ::new (node) node_t(micro_containers::traits::move(value)); _size+=1;
+        ::new (node) node_t(micro_containers::traits::move(value));
         node_query q = internal_insert_node(node);
         return pair<iterator, bool>(iterator(q.node, q.bucket_index, this), true);
     }
