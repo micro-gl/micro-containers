@@ -15,7 +15,7 @@
 
 //#define MICRO_CONTAINERS_ENABLE_THROW
 #ifdef MICRO_CONTAINERS_ENABLE_THROW
-struct throw_hash_map_out_of_range {};
+struct throw_hash_set_out_of_range {};
 #endif
 
 #ifndef MICRO_CONTAINERS_SIZE_TYPE
@@ -41,13 +41,12 @@ template<> struct hash<signed> {
  * @tparam Allocator allocator type
  */
 template<class Key, class T,
-         class Hash=hash<Key>,
-         class Allocator=micro_containers::traits::std_allocator<char>>
-class hash_map {
+        class Hash=hash<Key>,
+        class Allocator=micro_containers::traits::std_allocator<char>>
+class hash_set {
 public:
     using key_type = Key;
-    using mapped_type = T;
-    using value_type = pair<Key, T>;
+    using value_type = Key;
     using size_type = MICRO_CONTAINERS_SIZE_TYPE;
     using hasher = Hash;
     using allocator_type = Allocator;
@@ -60,19 +59,15 @@ private:
     struct node_t {
         node_t()=default;
         node_t(const value_type & $value) :
-                prev(nullptr), next(nullptr), key_value($value) {}
+                prev(nullptr), next(nullptr), key($value) {}
         node_t(value_type && $value) :
-                prev(nullptr), next(nullptr), key_value(micro_containers::traits::move($value)) {}
+                prev(nullptr), next(nullptr), key(micro_containers::traits::move($value)) {}
         template<class... Args>
         node_t(Args&&... args) : prev(nullptr), next(nullptr),
-                                 key_value(micro_containers::traits::forward<Args>(args)...) {}
+                                 key(micro_containers::traits::forward<Args>(args)...) {}
         node_t * prev;
         node_t * next;
-        value_type key_value;
-        const Key & key() const { return key_value.first; }
-        Key & key() { return key_value.first; }
-        const T & value() const { return key_value.second; }
-        T & value() { return key_value.second; }
+        value_type key;
     };
 
     struct bucket_t { //  bucket is a wrapper around a list
@@ -100,12 +95,12 @@ private:
     struct iterator_t {
         using pointer = typename micro_containers::traits::remove_reference_t<value_reference_type> *;
         const node_t * _n; // node
-        const hash_map * _c; // container
+        const hash_set * _c; // container
         size_type _bi; // bucket index
 
         template<class value_reference_type_t>
         iterator_t(const iterator_t<value_reference_type_t> & o) : iterator_t(o._n, o._bi, o._c) {}
-        explicit iterator_t(const node_t * n, size_type bi, const hash_map * c) : _n(n), _bi(bi), _c(c) {}
+        explicit iterator_t(const node_t * n, size_type bi, const hash_set * c) : _n(n), _bi(bi), _c(c) {}
         iterator_t& operator++() {
             auto q = _c->internal_node_successor(_n, _bi);
             _n = q.node; _bi = q.bucket_index; return *this;
@@ -124,8 +119,8 @@ private:
         iterator_t operator--(int) { iterator_t ret(_n, _bi, _c); --(*this); return ret; }
         bool operator==(iterator_t o) const { return _n==o._n; }
         bool operator!=(iterator_t o) const { return !(*this==o); }
-        value_reference_type operator*() const { return (*ncn(_n)).key_value; }
-        pointer operator->() const { return &(ncn(_n)->key_value); }
+        value_reference_type operator*() const { return (*ncn(_n)).key; }
+        pointer operator->() const { return &(ncn(_n)->key); }
     };
 
 public:
@@ -198,15 +193,15 @@ private:
         return node;
     }
     node_query internal_insert_node(node_t * node) {
-        const auto hash = _hasher(node->key());
+        const auto hash = _hasher(node->key);
         size_type bucket_index = hash % _bucket_count;
         auto nq = node_query(internal_insert_node_at_front_of_bucket(node, bucket_index),
-                          bucket_index);
+                             bucket_index);
         _size+=1;
         if(requires_rehash()) {
             rehash(bucket_count()*size_type(2));
             // rewrite node query, because the bucket index might have changed
-            nq.bucket_index = bucket(node->key());
+            nq.bucket_index = bucket(node->key);
         }
         return nq;
     }
@@ -296,7 +291,7 @@ public:
         bucket_type * old_buckets = _buckets;
         const size_type old_buckets_count = _bucket_count;
         if(new_buckets_count==old_buckets_count ||
-                        new_buckets_count==0) return;
+           new_buckets_count==0) return;
         if(new_buckets_count < minimal_required_buckets_count_for_valid_load_factor())
             new_buckets_count = minimal_required_buckets_count_for_valid_load_factor();
         // allocate and construct new buckets
@@ -313,7 +308,7 @@ public:
                 if(bucket.list) bucket.list->prev = nullptr;
                 removed_node->prev=removed_node->next=nullptr;
                 // compute hash again and re-assign bucket to new bucket
-                const auto hash = _hasher(removed_node->key());
+                const auto hash = _hasher(removed_node->key);
                 size_type bucket_index = hash % new_buckets_count;
                 auto & new_bucket = new_buckets[bucket_index];
                 // add front in new bucket list
@@ -331,37 +326,37 @@ public:
         _bucket_count = new_buckets_count;
     }
 
-    hash_map(size_type bucket_count,
+    hash_set(size_type bucket_count,
              const Hash& hash = Hash(),
              const Allocator& allocator = Allocator()) :
             _max_load_factor(1.0f), _bucket_count(0), _size(0),
             _buckets(nullptr), _hasher(hash), _alloc_node(allocator), _alloc_bucket(allocator) {
         rehash(bucket_count);
     }
-    hash_map() : hash_map(DEFAULT_BUCKET_COUNT, Hash(), Allocator()) {}
-    explicit hash_map(const Allocator& alloc) : hash_map(DEFAULT_BUCKET_COUNT, Hash(), alloc) {};
-    hash_map(size_type bucket_count, const Allocator& alloc ) : hash_map(bucket_count, Hash(), alloc) {}
+    hash_set() : hash_set(DEFAULT_BUCKET_COUNT, Hash(), Allocator()) {}
+    explicit hash_set(const Allocator& alloc) : hash_set(DEFAULT_BUCKET_COUNT, Hash(), alloc) {};
+    hash_set(size_type bucket_count, const Allocator& alloc ) : hash_set(bucket_count, Hash(), alloc) {}
 
     template< class InputIt >
-    hash_map(InputIt first, InputIt last, size_type bucket_count,
+    hash_set(InputIt first, InputIt last, size_type bucket_count,
              const Hash& hash = Hash(), const Allocator& alloc = Allocator() )
-            : hash_map(bucket_count, hash, alloc) {
+            : hash_set(bucket_count, hash, alloc) {
         InputIt current(first);
         while(current!=last) { insert(*current); ++current; }
     }
     template< class InputIt >
-    hash_map(InputIt first, InputIt last, size_type bucket_count,
+    hash_set(InputIt first, InputIt last, size_type bucket_count,
              const Allocator& alloc = Allocator() )
-            : hash_map(first, last, bucket_count, Hash(), alloc) {}
+            : hash_set(first, last, bucket_count, Hash(), alloc) {}
 
-    hash_map(const hash_map & other, const Allocator & allocator) :
-            hash_map(other._bucket_count, other._hasher, other.get_allocator()) {
+    hash_set(const hash_set & other, const Allocator & allocator) :
+            hash_set(other._bucket_count, other._hasher, other.get_allocator()) {
         for(const auto & item : other) insert(item);
     }
-    hash_map(const hash_map & other) : hash_map(other, other.get_allocator()) {}
+    hash_set(const hash_set & other) : hash_set(other, other.get_allocator()) {}
 
-    hash_map(hash_map && other, const Allocator & allocator) :
-            hash_map(size_type(0), other._hasher, other.get_allocator()) {
+    hash_set(hash_set && other, const Allocator & allocator) :
+            hash_set(size_type(0), other._hasher, other.get_allocator()) {
         // using 0 to mute main constructor table creation
         const bool are_equal_allocators = _alloc_node == allocator;
         _max_load_factor = other._max_load_factor;
@@ -379,11 +374,11 @@ public:
             other.clear();
         }
     }
-    hash_map(hash_map && other) noexcept :
-            hash_map(micro_containers::traits::move(other), other.get_allocator()) {}
-    ~hash_map() { clear(); }
+    hash_set(hash_set && other) noexcept :
+            hash_set(micro_containers::traits::move(other), other.get_allocator()) {}
+    ~hash_set() { clear(); }
 
-    hash_map & operator=(const hash_map & other) {
+    hash_set & operator=(const hash_set & other) {
         if(this==&other) return *this;
         clear();
         _max_load_factor = other.max_load_factor();
@@ -391,7 +386,7 @@ public:
         for(const auto & item : other) insert(item);
         return *this;
     }
-    hash_map & operator=(hash_map && other) noexcept {
+    hash_set & operator=(hash_set && other) noexcept {
         if(this==&(other)) return *this;
         clear();
         const bool are_equal_allocators = _alloc_node == other.get_allocator();
@@ -424,14 +419,14 @@ public:
         const auto bi = bucket(key);
         const auto & bucket = _buckets[bi];
         const node_t * iter = bucket.list;
-        while(iter && !(iter->key()==key)) { iter=iter->next; }
+        while(iter && !(iter->key==key)) { iter=iter->next; }
         return iter ? iterator(iter, bi, this) : end();
     }
     const_iterator find(const Key& key) const {
         const auto bi = bucket(key);
         const auto & bucket = _buckets[bi];
         const node_t * iter = bucket.list;
-        while(iter && !(iter->key()==key)) { iter=iter->next; }
+        while(iter && !(iter->key==key)) { iter=iter->next; }
         return iter ? const_iterator(iter, bi, this) : end();
     }
     bool contains(const Key& key) const {
@@ -439,29 +434,6 @@ public:
     }
 
     // element access
-    T& at(const Key& key) {
-        auto iter = find(key);
-#ifdef MICRO_CONTAINERS_ENABLE_THROW
-        if(iter==end()) throw throw_hash_map_out_of_range();
-#endif
-        return iter->second;
-    }
-    const T& at(const Key& key) const {
-        auto iter = find(key);
-#ifdef MICRO_CONTAINERS_ENABLE_THROW
-        if(iter==end()) throw throw_hash_map_out_of_range();
-#endif
-        return iter->second;
-    }
-    T & operator[](const Key & key) {
-        auto iter = insert(value_type(key, T())).first;
-        return iter->second;
-    }
-    T & operator[](Key && key) {
-        auto iter = insert(value_type(micro_containers::traits::move(key),
-                                      T())).first;
-        return iter->second;
-    }
 
     // Modifiers
     void clear() noexcept {
@@ -525,7 +497,7 @@ public:
     template<class KK, class TT, typename AA = match_t<KK, Key>, typename BB = match_t<TT, T>>
     pair<iterator, bool> insert(KK && key, TT && value) {
         return insert(value_type(micro_containers::traits::forward<KK>(key),
-                   micro_containers::traits::forward<TT>(value)));
+                                 micro_containers::traits::forward<TT>(value)));
     }
 
     size_type erase(const Key& key) {

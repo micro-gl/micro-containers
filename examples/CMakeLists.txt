@@ -21,6 +21,7 @@ set(SOURCES
         test_dictionary.cpp
         test_ordered_set.cpp
         test_hash_map.cpp
+        test_hash_set.cpp
         )
 
 set(SOURCES_SHARED "" src/test_utils.h)
