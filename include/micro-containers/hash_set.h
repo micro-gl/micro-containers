@@ -36,11 +36,10 @@ template<> struct hash<signed> {
  * Notes:
  * - This class is Allocator-Aware
  * @tparam Key the key type, that the tree stores
- * @tparam T The mapped value type of a key
  * @tparam Hash The hash struct/function must implement `size_type operator()(const Key & key) const `
  * @tparam Allocator allocator type
  */
-template<class Key, class T,
+template<class Key,
         class Hash=hash<Key>,
         class Allocator=micro_containers::traits::std_allocator<char>>
 class hash_set {
@@ -67,7 +66,7 @@ private:
                                  key(micro_containers::traits::forward<Args>(args)...) {}
         node_t * prev;
         node_t * next;
-        value_type key;
+        Key key;
     };
 
     struct bucket_t { //  bucket is a wrapper around a list
@@ -459,9 +458,9 @@ public:
         _buckets=nullptr; _bucket_count=_size=0;
     }
 
-    pair<iterator, bool> insert(const value_type& value) {
+    pair<iterator, bool> insert(const Key& value) {
         {
-            iterator iter = find(value.first);
+            iterator iter = find(value);
             if (iter!=end()) return pair<iterator, bool>(iter, false);
         }
         auto * node = _alloc_node.allocate(1);
@@ -469,9 +468,9 @@ public:
         node_query q = internal_insert_node(node);
         return pair<iterator, bool>(iterator(q.node, q.bucket_index, this), true);
     }
-    pair<iterator, bool> insert(value_type && value) {
+    pair<iterator, bool> insert(Key && value) {
         {
-            iterator iter = find(value.first);
+            iterator iter = find(value);
             if (iter!=end()) return pair<iterator, bool>(iter, false);
         }
         auto * node = _alloc_node.allocate(1);
@@ -494,25 +493,20 @@ public:
         InputIt current(first);
         while(current!=last) { insert(*current); ++current; }
     }
-    template<class KK, class TT, typename AA = match_t<KK, Key>, typename BB = match_t<TT, T>>
-    pair<iterator, bool> insert(KK && key, TT && value) {
-        return insert(value_type(micro_containers::traits::forward<KK>(key),
-                                 micro_containers::traits::forward<TT>(value)));
-    }
 
     size_type erase(const Key& key) {
         auto iter_next = internal_erase(key);
         return iter_next==end() ? 0 : 1;
     }
-    iterator erase(iterator pos) { return iterator(internal_erase(pos->first)); }
-    iterator erase(const_iterator pos) { return iterator(internal_erase(pos->first)); }
+    iterator erase(iterator pos) { return iterator(internal_erase(*pos)); }
+    iterator erase(const_iterator pos) { return iterator(internal_erase(*pos)); }
     iterator erase(const_iterator first, const_iterator last) {
         const_iterator current(first);
         while (current!=last) current=erase(current);
         return current;
     }
-    template< class... Args >
+    template<class... Args>
     pair<iterator, bool> emplace(Args&&... args) {
-        return insert(value_type(micro_containers::traits::forward<Args>(args)...));
+        return insert(Key(micro_containers::traits::forward<Args>(args)...));
     }
 };
