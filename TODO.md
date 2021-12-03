@@ -1,11 +1,13 @@
 - linked-list -> inherit node with value type so sentinel will not hold value-type
-- hash-set
-- hash-map
 - heap
 - priority queue
 - queue
 - stack
+- span
+- 
 - sort placement new thing
+- incorporate size_type
 - decide weather every class is stand alone
 - design some algorithms like for_each, range, etc...
 - add == operator outside for each container
+- add insert/erase by iterator to dynamic array and static array

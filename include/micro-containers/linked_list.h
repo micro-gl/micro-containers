@@ -13,14 +13,12 @@
 enum class micro { blah };
 
 #ifndef MICRO_CONTAINERS_SIZE_TYPE
-inline void* operator new (unsigned long n, void* ptr, enum micro) noexcept {
-    return ptr;
-}
-#else
+#define MICRO_CONTAINERS_SIZE_TYPE unsigned long
+#endif
+
 inline void* operator new (MICRO_CONTAINERS_SIZE_TYPE n, void* ptr, enum micro) noexcept {
     return ptr;
 }
-#endif
 
 namespace linked_list_traits {
 
@@ -92,7 +90,7 @@ public:
     using pointer = value_type *;
     using const_pointer = const value_type *;
     using index = unsigned int;
-    using uint = unsigned int;
+    using size_type = MICRO_CONTAINERS_SIZE_TYPE;
 
 private:
     struct node_t {
@@ -161,12 +159,12 @@ public:
         reset_sentinel();
     }
 
-    linked_list(const uint count, const T & value, const Allocator & alloc = Allocator()) :
+    linked_list(const size_type count, const T & value, const Allocator & alloc = Allocator()) :
             linked_list(alloc) {
         for (int ix = 0; ix < count; ++ix) push_back(value);
     }
 
-    linked_list(const uint count, const Allocator & allocator = Allocator()) :
+    linked_list(const size_type count, const Allocator & allocator = Allocator()) :
             linked_list(count, T(), allocator) {}
 
     template<class Iterable>
@@ -279,7 +277,7 @@ public:
         // insert_node a new node before pos
         return insert_node_internal(pos, create_node(linked_list_traits::move(value)));
     }
-    iterator insert(const_iterator pos, uint count, const T & value) {
+    iterator insert(const_iterator pos, size_type count, const T & value) {
         if(count==0) return pos;
         auto first_pos = insert(pos, value);
         for (int ix = 1; ix < count; ++ix)

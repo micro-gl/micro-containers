@@ -30,9 +30,8 @@ template<> struct hash<signed> {
     MICRO_CONTAINERS_SIZE_TYPE operator()(signed const s) const noexcept { return s & ~(1<<((sizeof(s)<<3)-1)) ; }
 };
 
-
 /**
- * Hash-map is an un-ordered associative data structure also known as Hash-Table
+ * Hash-set is an un-ordered associative data structure also known as Hash-Table
  * Notes:
  * - This class is Allocator-Aware
  * @tparam Key the key type, that the tree stores
