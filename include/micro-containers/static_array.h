@@ -10,6 +10,14 @@
 ========================================================================================*/
 #pragma once
 
+#ifndef MICRO_CONTAINERS_SIZE_TYPE
+#define MICRO_CONTAINERS_SIZE_TYPE unsigned long
+#endif
+
+#ifdef MICRO_CONTAINERS_ENABLE_THROW
+struct throw_static_array_out_of_range {};
+#endif
+
 namespace static_array_traits {
 
     template< class T > struct remove_reference      {typedef T type;};
@@ -35,23 +43,15 @@ namespace static_array_traits {
     class void_allocator {
     public:
         using value_type = T;
-        using size_t = unsigned long;
-
+        using size_t = MICRO_CONTAINERS_SIZE_TYPE;
         template<class U>
         explicit void_allocator(const void_allocator<U> & other) noexcept { };
         explicit void_allocator()=default;
-
         template <class U, class... Args>
-        void construct(U* p, Args&&... args) {
-            new(p) U(forward<Args>(args)...);
-        }
-
+        void construct(U* p, Args&&... args) {}
         T * allocate(size_t n) { return nullptr; }
         void deallocate(T * p, size_t n=0) { }
-
-        template<class U> struct rebind {
-            typedef void_allocator<U> other;
-        };
+        template<class U> struct rebind { typedef void_allocator<U> other; };
     };
 
     template<class T1, class T2>
@@ -61,8 +61,11 @@ namespace static_array_traits {
 }
 
 /**
- * Static array, equivalent to std::array, but with some mods:
+ * Static array, That behaves like a static vector, this is cool for debugging. This is
+ * NOT equivalent to std::array, but with some mods:
  * 1. contains FAKE allocator interface, so it can be compatible with many allocator-aware algorithms.
+ * 2. you can push to back
+ * 2. 3 all elements are destructed at construction
  *
  * @tparam T item type
  * @tparam N the fixed capacity
@@ -73,62 +76,75 @@ class static_array {
 public:
     using value_type = T;
     using allocator_type = fake_allocator;
-    using index = unsigned int;
-    using type = T;
-    using uint = unsigned int;
+    using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+    using reference = value_type &;
+    using const_reference = const value_type &;
+    using pointer = value_type *;
+    using const_pointer = const value_type *;
 
 private:
     T _data[N];
-    index _current = 0;
+    size_type _current;
 
 public:
-    explicit static_array() = default;
+    static_array() : _current(0), _data() {
+        // destruct all the elements
+        for (size_type ix = 0; ix < N; ++ix)
+            (_data + ix)->~T();
+    }
+
     template<class Iterable>
-    static_array(const Iterable & list) {
+    static_array(const Iterable & list) : static_array() {
         for (const auto & item : list) push_back(item);
     }
-    static_array(const allocator_type & allocator) {}
-    static_array(const uint count, const T & value = T(),
-                 const allocator_type & alloc = allocator_type()) {
-        for (int ix = 0; ix < count; ++ix) push_back(value);
+    static_array(const allocator_type & allocator) : static_array()  {}
+    static_array(const size_type count, const T & value = T(),
+                 const allocator_type & alloc = allocator_type()) : static_array()  {
+        for (size_type ix = 0; ix < count; ++ix) push_back(value);
     }
-    static_array(const static_array & container) {
-        for(auto ix = 0; ix < container.size(); ix++)
-            push_back(container[ix]);
+    static_array(const static_array & other) : static_array()  {
+        for(auto ix = 0; ix < other.size(); ix++)
+            push_back(other[ix]);
     }
-    static_array(static_array && container) noexcept {
-        for(auto ix = 0; ix < container.size(); ix++)
-            push_back(static_array_traits::move(container[ix]));
-    }
-
-    static_array & operator=(const static_array & container) {
-        if(this==&container) return (*this);
-        clear();
-        for(index ix = 0; ix < container.size(); ix++)
-            push_back(container[ix]);
-        return (*this);
-    }
-    static_array & operator=(static_array && container) noexcept {
-        if(this==&container) return (*this);
-        clear();
-        for(index ix = 0; ix < container.size(); ix++)
-            push_back(static_array_traits::move(container[ix]));
-        return (*this);
+    static_array(static_array && other) noexcept : static_array() {
+        for(auto ix = 0; ix < other.size(); ix++)
+            push_back(static_array_traits::move(other[ix]));
     }
 
-    T& operator[](index i) { return _data[i]; }
-    const T& operator[](index i) const { return _data[i]; }
+    static_array & operator=(const static_array & other) {
+        if(this==&other) return (*this);
+        clear();
+        for(size_type ix = 0; ix < other.size(); ix++)
+            push_back(other[ix]);
+        return (*this);
+    }
+    static_array & operator=(static_array && other) noexcept {
+        if(this==&other) return (*this);
+        clear();
+        for(size_type ix = 0; ix < other.size(); ix++)
+            push_back(static_array_traits::move(other[ix]));
+        other.clear();
+        return (*this);
+    }
+
+    T& operator[](const size_type i) { return _data[i]; }
+    const T& operator[](const size_type i) const { return _data[i]; }
     T* data() { return _data; }
     const T* data() const { return _data; }
-    const T& peek() { return operator[](_current); }
 
     void push_back(const T & v) {
-        if(_current==N-1) return;
-        _data[_current++] = v;
+        if(_current==N) return;
+        ::new(_data + _current++) T(v);
     }
     void push_back(T && v) {
-        if(_current==N-1) return;
-        _data[_current++] = static_array_traits::move(v);
+        if(_current==N) return;
+        ::new(_data + _current++) T(static_array_traits::move(v));
+    }
+
+    template <class... Args>
+    void emplace_back(Args&&... args) {
+        if(_current==N) return;
+        ::new(_data + _current++) T(static_array_traits::forward<Args>(args)...);
     }
     void pop_back() {
         if(_current==0) return;
@@ -136,14 +152,15 @@ public:
     }
 
     T& back() noexcept { return _data[_current-1]; }
+    T& front() noexcept { return _data[0]; }
 
     void clear() {
-        for (int ix = 0; ix < capacity(); ++ix)
-            _data[ix].~T();
+        for (size_type ix = 0; ix < capacity(); ++ix)
+            (_data + ix)->~T();
         _current = 0;
     }
-    index size() const { return _current; }
-    constexpr index capacity() const { return N; }
+    size_type size() const { return _current; }
+    constexpr size_type capacity() const { return N; }
     allocator_type get_allocator() const { return allocator_type(); }
 
     T* begin() { return _data; }

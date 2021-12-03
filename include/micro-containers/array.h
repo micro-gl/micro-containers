@@ -17,6 +17,10 @@ struct throw_array_out_of_range {};
  * The struct combines the performance and accessibility of a C-style array with the benefits
  * of a standard container, such as knowing its own size, supporting assignment,
  * random access iterators, etc.
+ *
+ * Note:
+ * - This is an aggregate type and is aggregate initialized, this is why everything works,
+ *   without constructor or assignment operator.
  * @tparam T item type
  * @tparam N size of array
  */

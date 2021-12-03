@@ -7,7 +7,9 @@ using std::to_string;
 
 struct dummy_t {
     int a, b;
-    explicit dummy_t(int $a=0, int $b=1) : a($a), b($b) {}
+    explicit dummy_t(int $a=0, int $b=1) : a($a), b($b) {
+        int aa;
+    }
 };
 
 std::string to_string(const dummy_t& value) {

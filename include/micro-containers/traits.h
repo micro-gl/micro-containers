@@ -34,8 +34,8 @@ namespace micro_containers {
         }
 
         // is same
-        template<class T1, class T2> struct is_same { const static bool value = false; };
-        template<class T> struct is_same<T, T> { const static bool value = true; };
+        template<class T1, class T2> struct is_same { constexpr static bool value = false; };
+        template<class T> struct is_same<T, T> { constexpr static bool value = true; };
 
         // is float point
         template<class number>
@@ -74,8 +74,11 @@ namespace micro_containers {
         struct is_allocator_aware : micro_containers::traits::false_type { };
 
         template <typename T>
-        struct is_allocator_aware <T, decltype((void) T().get_allocator(), 0)> : micro_containers::traits::true_type { };
-
+        struct is_allocator_aware <T, typename conditional<false, typename T::allocator_type, int>::type> :
+                micro_containers::traits::true_type { };
+// another version with decltype
+//        template <typename T>
+//        struct is_allocator_aware <T, decltype((void) T().get_allocator(), 0)> : micro_containers::traits::true_type { };
 
         /**
          * standard allocator
