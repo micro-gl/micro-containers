@@ -12,24 +12,12 @@
 
 #include "traits.h"
 #include "pair.h"
+#include "new_micro.h"
 
 //#define MICRO_CONTAINERS_ENABLE_THROW
 #ifdef MICRO_CONTAINERS_ENABLE_THROW
 struct throw_hash_map_out_of_range {};
 #endif
-
-#ifndef MICRO_CONTAINERS_SIZE_TYPE
-#define MICRO_CONTAINERS_SIZE_TYPE unsigned long
-#endif
-
-template<class Key> struct hash{};
-template<> struct hash<unsigned> {
-    MICRO_CONTAINERS_SIZE_TYPE operator()(unsigned const s) const noexcept { return s; }
-};
-template<> struct hash<signed> {
-    MICRO_CONTAINERS_SIZE_TYPE operator()(signed const s) const noexcept { return s & ~(1<<((sizeof(s)<<3)-1)) ; }
-};
-
 
 /**
  * Hash-map is an un-ordered associative data structure also known as Hash-Table
@@ -41,7 +29,7 @@ template<> struct hash<signed> {
  * @tparam Allocator allocator type
  */
 template<class Key, class T,
-         class Hash=hash<Key>,
+         class Hash=micro_hash<Key>,
          class Allocator=micro_containers::traits::std_allocator<char>>
 class hash_map {
 public:
@@ -114,9 +102,9 @@ private:
             auto q = _c->internal_node_predecessor(_n, _bi);
             _n = q.node; _bi = q.bucket_index; return *this;
         }
-        iterator_t operator+(int val) {
+        iterator_t operator+(size_type val) {
             node_query q(_n, _bi);
-            for (int ix = 0; ix < val; ++ix)
+            for (size_type ix = 0; ix < val; ++ix)
                 q = _c->internal_node_successor(q.node, q.bucket_index);
             return iterator_t(q.node, q.bucket_index, _c);
         }
@@ -160,7 +148,7 @@ private:
     node_query internal_node_first() const {
         // return first node in the leftmost non-empty bucket or nullptr indicating end
         node_query result;
-        for (int ix = 0; ix < _bucket_count; ++ix) {
+        for (size_type ix = 0; ix < _bucket_count; ++ix) {
             auto * bucket_list_head = _buckets[ix].list;
             if(bucket_list_head) {
                 result.node = bucket_list_head; result.bucket_index = ix;
@@ -173,13 +161,14 @@ private:
     node_query internal_node_last() const {
         // return last node from the right non-empty bucket or nullptr indicating end when not found
         node_query result;
-        for (int ix = _bucket_count-1; ix >=0; --ix) {
-            auto * tail = _buckets[ix].tail();
-            if(tail) {
-                result.bucket_index=ix; result.node=tail;
-                return result;
+        if(_bucket_count)
+            for (size_type ix = _bucket_count-1; ix >=0; --ix) {
+                auto * tail = _buckets[ix].tail();
+                if(tail) {
+                    result.bucket_index=ix; result.node=tail;
+                    return result;
+                }
             }
-        }
         result.bucket_index=_bucket_count; result.node=nullptr;
         return result;
     }
@@ -301,10 +290,10 @@ public:
             new_buckets_count = minimal_required_buckets_count_for_valid_load_factor();
         // allocate and construct new buckets
         auto * new_buckets = _alloc_bucket.allocate(new_buckets_count);
-        for (int ix = 0; ix < new_buckets_count; ++ix)
-            ::new(new_buckets+ix) bucket_t(nullptr);
+        for (size_type ix = 0; ix < new_buckets_count; ++ix)
+            ::new(new_buckets+ix, microc_new::blah) bucket_t(nullptr);
         // iterate all nodes
-        for (int ix = 0; ix < old_buckets_count; ++ix) {
+        for (size_type ix = 0; ix < old_buckets_count; ++ix) {
             auto & bucket = old_buckets[ix];
             while(bucket.list) {
                 // remove head node from old list
@@ -323,7 +312,7 @@ public:
             }
         }
         // destruct and deallocate old bucket
-        for (int ix = 0; ix < old_buckets_count; ++ix)
+        for (size_type ix = 0; ix < old_buckets_count; ++ix)
             old_buckets[ix].~bucket_t();
         _alloc_bucket.deallocate(old_buckets);
         // assign new bucket info
@@ -467,7 +456,7 @@ public:
     void clear() noexcept {
         const auto bucket_count = _bucket_count;
         // destroy nodes
-        for (int ix = 0; ix < bucket_count; ++ix) {
+        for (size_type ix = 0; ix < bucket_count; ++ix) {
             auto & bucket = _buckets[ix];
             while(bucket.list) {
                 // remove head node from old list
@@ -481,7 +470,7 @@ public:
             }
         }
         // destroy buckets and deallocate, this is useless, trivial destructor
-        for (int ix = 0; ix < bucket_count; ++ix) _buckets[ix].~bucket_t();
+        for (size_type ix = 0; ix < bucket_count; ++ix) _buckets[ix].~bucket_t();
         _alloc_bucket.deallocate(_buckets);
         // reset values
         _buckets=nullptr; _bucket_count=_size=0;
@@ -493,7 +482,7 @@ public:
             if (iter!=end()) return pair<iterator, bool>(iter, false);
         }
         auto * node = _alloc_node.allocate(1);
-        ::new (node) node_t(value);
+        ::new (node, microc_new::blah) node_t(value);
         node_query q = internal_insert_node(node);
         return pair<iterator, bool>(iterator(q.node, q.bucket_index, this), true);
     }
@@ -503,7 +492,7 @@ public:
             if (iter!=end()) return pair<iterator, bool>(iter, false);
         }
         auto * node = _alloc_node.allocate(1);
-        ::new (node) node_t(micro_containers::traits::move(value));
+        ::new (node, microc_new::blah) node_t(micro_containers::traits::move(value));
         node_query q = internal_insert_node(node);
         return pair<iterator, bool>(iterator(q.node, q.bucket_index, this), true);
     }

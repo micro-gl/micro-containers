@@ -1,8 +1,4 @@
-#include <iostream>
-#include <sstream>
-
 #include "src/test_utils.h"
-#include <micro-containers/traits.h>
 #include <micro-containers/static_array.h>
 
 void test_insert() {
@@ -42,8 +38,5 @@ int main() {
     // modifiers
     test_insert();
     test_emplace();
-
-    auto aaa= micro_containers::traits::is_allocator_aware<static_array<int, 5>>::value;
-    auto aaa2= micro_containers::traits::is_allocator_aware<dummy_t>::value;
 }
 

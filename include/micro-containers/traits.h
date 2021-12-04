@@ -10,6 +10,16 @@
 ========================================================================================*/
 #pragma once
 
+#include "new_micro.h"
+
+template<class Key> struct micro_hash{};
+template<> struct micro_hash<unsigned> {
+    MICRO_CONTAINERS_SIZE_TYPE operator()(unsigned const s) const noexcept { return s; }
+};
+template<> struct micro_hash<signed> {
+    MICRO_CONTAINERS_SIZE_TYPE operator()(signed const s) const noexcept { return s & ~(1<<((sizeof(s)<<3)-1)) ; }
+};
+
 namespace micro_containers {
     namespace traits {
 
@@ -96,7 +106,7 @@ namespace micro_containers {
 
             template <class U, class... Args>
             void construct(U* p, Args&&... args) {
-                new(p) U(traits::forward<Args>(args)...);
+                ::new(p, microc_new::blah) U(traits::forward<Args>(args)...);
             }
             T * allocate(size_t n) { return (T *)operator new(n * sizeof(T)); }
             void deallocate(T * p, size_t n=0) { operator delete (p); }
@@ -112,3 +122,5 @@ namespace micro_containers {
         }
     }
 }
+
+#include "pair.h"

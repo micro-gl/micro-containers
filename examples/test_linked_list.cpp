@@ -1,32 +1,9 @@
-#include <iostream>
-#include <sstream>
-
+#include "src/test_utils.h"
 #include <micro-containers/linked_list.h>
 
-using std::to_string;
-
-struct dummy_t {
-    int a, b;
-    explicit dummy_t(int $a=0, int $b=1) : a($a), b($b) {}
-};
-
-std::string to_string(const dummy_t& value) {
-    std::ostringstream os;
-    os << "{ a: " << value.a << ", b: " << value.b << "}";
-    return os.str();
-}
-
-template<class Container>
-void print_simple_container(const Container & container) {
-    std::cout << "(";
-    for (const auto & item : container) {
-        std::cout << to_string(item) << ", ";
-    }
-    std::cout << ")" << std::endl;
-}
-
 void test_clear() {
-    std::cout << "test_clear" << std::endl;
+    print_test_header("test_clear");
+
     linked_list<int> list{};
     list.push_back(1);
     list.push_back(2);
@@ -41,7 +18,7 @@ void test_clear() {
 }
 
 void test_erase() {
-    std::cout << "test_erase" << std::endl;
+    print_test_header("test_erase");
     linked_list<int> list{};
 
     list.push_back(1);
@@ -62,7 +39,7 @@ void test_erase() {
 }
 
 void test_erase_range() {
-    std::cout << "test_erase_range" << std::endl;
+    print_test_header("test_erase_range");
     linked_list<int> list{};
 
     list.push_back(1);
@@ -84,7 +61,7 @@ void test_erase_range() {
 }
 
 void test_assign_copy() {
-    std::cout << "test_assign_copy" << std::endl;
+    print_test_header("test_assign_copy");
     linked_list<int> list{};
     linked_list<int> list2{};
 
@@ -98,7 +75,7 @@ void test_assign_copy() {
 }
 
 void test_assign_move() {
-    std::cout << "test_assign_move" << std::endl;
+    print_test_header("test_assign_move");
     linked_list<int> list1{};
     linked_list<int> list2{};
 
@@ -121,7 +98,7 @@ void test_assign_move() {
 }
 
 void test_construct_copy() {
-    std::cout << "test_construct_copy" << std::endl;
+    print_test_header("test_construct_copy");
     linked_list<int> list{};
 
     list.push_back(1);
@@ -134,7 +111,7 @@ void test_construct_copy() {
 }
 
 void test_construct_move() {
-    std::cout << "test_construct_move" << std::endl;
+    print_test_header("test_construct_move");
     linked_list<int> list1{};
 
     list1.push_back(1);
@@ -157,7 +134,7 @@ void test_construct_move() {
 
 
 void test_insert_single() {
-    std::cout << "test_insert_single" << std::endl;
+    print_test_header("test_insert_single");
     linked_list<float> list1{};
 
     list1.push_back(1);
@@ -184,7 +161,7 @@ void test_insert_single() {
 }
 
 void test_insert_multi() {
-    std::cout << "test_insert_multi" << std::endl;
+    print_test_header("test_insert_multi");
     linked_list<float> list1{};
 
     list1.push_back(1);
@@ -207,7 +184,7 @@ void test_insert_multi() {
 }
 
 void test_insert_with_iterator() {
-    std::cout << "test_insert_with_iterator" << std::endl;
+    print_test_header("test_insert_with_iterator");
     linked_list<int> list1{};
 
     list1.push_back(1);
@@ -232,7 +209,7 @@ void test_insert_with_iterator() {
 }
 
 void test_push_front() {
-    std::cout << "test_push_front" << std::endl;
+    print_test_header("test_push_front");
     linked_list<float> list1{};
 
     list1.push_front(1);
@@ -245,7 +222,7 @@ void test_push_front() {
 }
 
 void test_back_and_front() {
-    std::cout << "test_back_and_front" << std::endl;
+    print_test_header("test_back_and_front");
     linked_list<float> list1{};
 
     list1.push_back(1);
@@ -260,7 +237,7 @@ void test_back_and_front() {
 
 
 void test_emplace() {
-    std::cout << "test_emplace" << std::endl;
+    print_test_header("test_emplace");
 
     linked_list<dummy_t> list1{};
 
@@ -283,7 +260,7 @@ void test_emplace() {
 }
 
 void test_pop_back_and_front() {
-    std::cout << "test_pop_back_and_front" << std::endl;
+    print_test_header("test_pop_back_and_front");
 
     linked_list<int> list1{};
 

@@ -11,8 +11,6 @@
 #pragma once
 
 #include "avl_tree.h"
-#include "traits.h"
-#include "pair.h"
 
 template<class Key>
 struct dict_less {
@@ -44,6 +42,7 @@ public:
     using mapped_type = T;
     using value_type = pair<Key, T>;
     using key_compare = Compare;
+    using size_type = MICRO_CONTAINERS_SIZE_TYPE;
     using allocator_type = Allocator;
     using reference = value_type &;
     using const_reference = const value_type &;
@@ -152,7 +151,7 @@ public:
 
     // capacity
     bool empty() const noexcept { return _tree.empty(); }
-    unsigned int size() const noexcept { return _tree.size(); }
+    size_type size() const noexcept { return _tree.size(); }
 
     // lookup
     iterator find(const Key& key) {

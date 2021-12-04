@@ -10,6 +10,8 @@
 ========================================================================================*/
 #pragma once
 
+#include "traits.h"
+
 namespace buffer_traits {
     template< class T > struct remove_reference      {typedef T type;};
     template< class T > struct remove_reference<T&>  {typedef T type;};
@@ -37,13 +39,14 @@ private:
 
     rebind_alloc _allocator;
     element_type *_data = nullptr;
+    using size_type = MICRO_CONTAINERS_SIZE_TYPE;
     bool owner = false;
-    int _size = 0;
+    size_type _size = 0;
 
-    static element_type * allocate_and_construct(const int size, rebind_alloc & allocator) {
+    static element_type * allocate_and_construct(const size_type size, rebind_alloc & allocator) {
         auto * mem = allocator.allocate(size);
-        for (int ix = 0; ix < size; ++ix)
-            new (mem+ix) element_type();
+        for (size_type ix = 0; ix < size; ++ix)
+            ::new (mem+ix, microc_new::blah) element_type();
         return (element_type *)mem;
     }
 
@@ -52,7 +55,7 @@ private:
         _data = allocate_and_construct(val.size(), _allocator); //new element_type[val.size()];
         _size = val.size();
         owner = true;
-        for (int ix = 0; ix < _size; ++ix)
+        for (size_type ix = 0; ix < _size; ++ix)
             _data[ix]=val._data[ix];
     }
 
@@ -71,18 +74,18 @@ private:
             _data = allocate_and_construct(val.size(), _allocator); //new element_type[val.size()];
             _size = val.size();
             owner = true;
-            for (int ix = 0; ix < _size; ++ix)
+            for (size_type ix = 0; ix < _size; ++ix)
                 _data[ix]=buffer_traits::move(val._data[ix]);
         }
         val.destroyIfPossibleAndReset();
     }
 
 public:
-    explicit buffer(int size, const allocator_type & allocator) :
+    explicit buffer(size_type size, const allocator_type & allocator) :
             _size{size}, owner{true}, _allocator(allocator) {
         _data = allocate_and_construct(size, _allocator);
     }
-    buffer(element_type* $data, int size,
+    buffer(element_type* $data, size_type size,
            const allocator_type & allocator=allocator_type()) :
                     _data{$data}, _size{size}, owner{false}, _allocator(allocator) {}
     buffer(const buffer & val) : _allocator(val._allocator) { copy_from(val); }
@@ -98,23 +101,23 @@ public:
 
     void destroyIfPossibleAndReset() {
         if(owner) {
-            for (int ix = 0; ix < size(); ++ix)
+            for (size_type ix = 0; ix < size(); ++ix)
                 _data[ix].~element_type();
             _allocator.deallocate(_data, _size);
         }
         _data=nullptr;
         _size=0;
     };
-    int size()  const { return _size; }
-    element_type & readAt(int index) { return _data[index]; }
-    void writeAt(const element_type &value, int index) { _data[index] = value; }
-    const element_type &operator[](int index) const { return _data[index]; }
-    element_type &operator[](int index) { return _data[index]; }
+    size_type size() const { return _size; }
+    element_type & readAt(size_type index) { return _data[index]; }
+    void writeAt(const element_type &value, size_type index) { _data[index] = value; }
+    const element_type &operator[](size_type index) const { return _data[index]; }
+    element_type &operator[](size_type index) { return _data[index]; }
     element_type * data() { return _data; }
     const element_type * data() const { return _data; }
     void fill(const element_type &value) {
-        int size2 = _size;
-        for (int ix = 0; ix < size2; ++ix)
+        size_type size2 = _size;
+        for (size_type ix = 0; ix < size2; ++ix)
             _data[ix] = value;
     }
 };

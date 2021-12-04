@@ -1,32 +1,5 @@
-#include <iostream>
-#include <sstream>
-
+#include "src/test_utils.h"
 #include <micro-containers/dictionary.h>
-
-using std::to_string;
-
-struct dummy_t {
-    int a, b;
-    explicit dummy_t(int $a=0, int $b=1) : a($a), b($b) {}
-};
-
-std::string to_string(const dummy_t& value) {
-    std::ostringstream os;
-    os << "{ a: " << value.a << ", b: " << value.b << "}";
-    return os.str();
-}
-
-template<class U1, class U2>
-std::string to_string(const pair<U1, U2>& value, bool compact=false) {
-    std::ostringstream os;
-    if(!compact)
-        os << "\n{\n" << "  key: \n    " << to_string(value.first) << ", \n  value: \n    "
-           << to_string(value.second) << "\n},";
-    else
-        os << "{" << "key: " << to_string(value.first) << ", value: "
-            << to_string(value.second) << "}";
-    return os.str();
-}
 
 template<class Container>
 void print_dictionary(const Container & container) {
@@ -38,7 +11,7 @@ void print_dictionary(const Container & container) {
 }
 
 void test_insert_with_perfect_forward() {
-    std::cout << "test_insert_with_perfect_forward" << std::endl;
+    print_test_header("test_insert_with_perfect_forward");
 
     using dict = dictionary<int, int>;
     dict d;
@@ -54,7 +27,7 @@ void test_insert_with_perfect_forward() {
 }
 
 void test_insert() {
-    std::cout << "test_insert" << std::endl;
+    print_test_header("test_insert");
 
     using dict = dictionary<int, int>;
     dict d;
@@ -70,7 +43,7 @@ void test_insert() {
 }
 
 void test_insert_with_range() {
-    std::cout << "test_insert_with_range" << std::endl;
+    print_test_header("test_insert_with_range");
 
     using dict = dictionary<int, int>;
     dict d_1, d_2;
@@ -99,7 +72,7 @@ void test_insert_with_range() {
 }
 
 void test_erase_with_iterator() {
-    std::cout << "test_erase_with_iterator" << std::endl;
+    print_test_header("test_erase_with_iterator");
 
     using dict = dictionary<int, int>;
     dict d;
@@ -123,7 +96,7 @@ void test_erase_with_iterator() {
 }
 
 void test_erase_with_key() {
-    std::cout << "test_erase_with_key" << std::endl;
+    print_test_header("test_erase_with_key");
 
     using dict = dictionary<int, int>;
     dict d;
@@ -147,7 +120,7 @@ void test_erase_with_key() {
 }
 
 void test_erase_with_range_iterator() {
-    std::cout << "test_erase_with_range_iterator" << std::endl;
+    print_test_header("test_erase_with_range_iterator");
 
     using dict = dictionary<int, int>;
     dict d;
@@ -168,7 +141,7 @@ void test_erase_with_range_iterator() {
 }
 
 void test_clear() {
-    std::cout << "test_clear" << std::endl;
+    print_test_header("test_clear");
 
     using dict = dictionary<int, int>;
     dict d;
@@ -188,7 +161,7 @@ void test_clear() {
 }
 
 void test_find() {
-    std::cout << "test_find" << std::endl;
+    print_test_header("test_find");
 
     using dict = dictionary<int, int>;
     dict d;
@@ -209,7 +182,7 @@ void test_find() {
 }
 
 void test_contains() {
-    std::cout << "test_contains" << std::endl;
+    print_test_header("test_contains");
 
     using dict = dictionary<int, int>;
     dict d;
@@ -230,7 +203,7 @@ void test_contains() {
 // Element Access
 
 void test_at() {
-    std::cout << "test_at" << std::endl;
+    print_test_header("test_at");
 
     using dict = dictionary<int, int>;
     dict d;
@@ -251,7 +224,7 @@ void test_at() {
 }
 
 void test_access_operator() {
-    std::cout << "test_access_operator" << std::endl;
+    print_test_header("test_access_operator");
 
     using dict = dictionary<int, int>;
     dict d;
@@ -273,7 +246,7 @@ void test_access_operator() {
 
 // move/copy
 void test_copy_and_move_ctor() {
-    std::cout << "test_copy_and_move_ctor" << std::endl;
+    print_test_header("test_copy_and_move_ctor");
 
     using dict = dictionary<int, int>;
     dict d_1;
@@ -302,7 +275,7 @@ void test_copy_and_move_ctor() {
 }
 
 void test_copy_and_move_assign() {
-    std::cout << "test_copy_and_move_assign" << std::endl;
+    print_test_header("test_copy_and_move_assign");
 
     using dict = dictionary<int, int>;
     dict d1, d2, d3;

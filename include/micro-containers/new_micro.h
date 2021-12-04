@@ -10,31 +10,13 @@
 ========================================================================================*/
 #pragma once
 
-#include "traits.h"
+#ifndef MICRO_CONTAINERS_SIZE_TYPE
+#define MICRO_CONTAINERS_SIZE_TYPE unsigned long
+#endif
 
-template<class T1, class T2>
-struct pair {
-    using first_type = T1;
-    using second_type = T2;
-    T1 first;
-    T2 second;
-
-    pair()=default;
-    ~pair()=default;
-    pair(const T1& x, const T2& y) : first(x), second(y) {}
-    template< class U1 = T1, class U2 = T2 >
-    constexpr pair(U1&& x, U2&& y) :
-            first(micro_containers::traits::forward<U1>(x)),
-            second(micro_containers::traits::forward<U2>(y)) {
-
-    };
-    pair(const pair& p) = default;
-    pair(pair&& p)  noexcept = default;
-    pair& operator=(const pair& other) {
-        first = other.first;
-        second = other.second;
-        return *this;
-    }
-    pair& operator=(pair&& other) noexcept=default;
-};
+enum class microc_new { blah };
+// This is a placement new override
+inline void* operator new (MICRO_CONTAINERS_SIZE_TYPE n, void* ptr, enum microc_new) noexcept {
+    return ptr;
+}
 

@@ -1,18 +1,6 @@
 #include "src/test_utils.h"
 #include <micro-containers/hash_map.h>
 
-template<class U1, class U2>
-std::string to_string(const pair<U1, U2>& value, bool compact=false) {
-    std::ostringstream os;
-    if(!compact)
-        os << "\n{\n" << "  key: \n    " << to_string(value.first) << ", \n  value: \n    "
-           << to_string(value.second) << "\n},";
-    else
-        os << "{" << "k: " << to_string(value.first) << ", v: "
-            << to_string(value.second) << "}";
-    return os.str();
-}
-
 template<class Container>
 void print_hash_map(const Container & container) {
     std::cout << "(";

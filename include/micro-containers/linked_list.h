@@ -10,15 +10,7 @@
 ========================================================================================*/
 #pragma once
 
-enum class micro { blah };
-
-#ifndef MICRO_CONTAINERS_SIZE_TYPE
-#define MICRO_CONTAINERS_SIZE_TYPE unsigned long
-#endif
-
-inline void* operator new (MICRO_CONTAINERS_SIZE_TYPE n, void* ptr, enum micro) noexcept {
-    return ptr;
-}
+#include "traits.h"
 
 namespace linked_list_traits {
 
@@ -57,7 +49,7 @@ namespace linked_list_traits {
 
         template <class U, class... Args>
         void construct(U* p, Args&&... args) {
-            new(p) U(linked_list_traits::forward<Args>(args)...);
+            ::new(p, microc_new::blah) U(linked_list_traits::forward<Args>(args)...);
         }
 
         T * allocate(size_t n) { return (T *)operator new(n * sizeof(T)); }
@@ -89,7 +81,6 @@ public:
     using const_reference = const value_type &;
     using pointer = value_type *;
     using const_pointer = const value_type *;
-    using index = unsigned int;
     using size_type = MICRO_CONTAINERS_SIZE_TYPE;
 
 private:
@@ -118,6 +109,18 @@ private:
         iterator_t& operator--() { _node=_node->prev; return *this;}
         iterator_t operator++(int) {iterator_t retval(_node); ++(*this); return retval;}
         iterator_t operator--(int) {iterator_t retval(_node); --(*this); return retval;}
+        iterator_t operator+(size_type step) {
+            node_t * current = _node;
+            for (size_type ix = 0; ix < step; ++ix)
+                current=current ? current->next : nullptr;
+            return iterator_t(current);
+        }
+        iterator_t operator-(size_type step) {
+            node_t * current = _node;
+            for (size_type ix = 0; ix < step; ++ix)
+                current=current ? current->prev : nullptr;
+            return iterator_t(current);
+        }
         bool operator==(iterator_t other) const {return _node == other._node;}
         bool operator!=(iterator_t other) const {return !(*this == other);}
         value_reference_type operator*() const {return _node->value ;}
@@ -143,14 +146,14 @@ public:
     const_iterator cend() const noexcept {return const_iterator(non_const_node(&_sentinel_node));}
     Allocator get_allocator() const noexcept { return Allocator(_alloc); }
     bool empty() const noexcept { return size()==0; }
-    index size() const noexcept { return _size; }
+    size_type size() const noexcept { return _size; }
 
 private:
     using rebind_allocator_type = typename Allocator::template rebind<node_t>::other;
 
     node_t _sentinel_node; // _sentinel_node=end, _sentinel_node->next=begin
     rebind_allocator_type _alloc;
-    index _size = 0u;
+    size_type _size = 0u;
 
     void reset_sentinel() { _sentinel_node.prev = _sentinel_node.next = &_sentinel_node; }
 
@@ -161,7 +164,7 @@ public:
 
     linked_list(const size_type count, const T & value, const Allocator & alloc = Allocator()) :
             linked_list(alloc) {
-        for (int ix = 0; ix < count; ++ix) push_back(value);
+        for (size_type ix = 0; ix < count; ++ix) push_back(value);
     }
 
     linked_list(const size_type count, const Allocator & allocator = Allocator()) :
@@ -241,18 +244,18 @@ public:
 private:
     node_t * create_node(const value_type & value = value_type()) {
         node_t * node = _alloc.allocate(1);
-        ::new(node, micro::blah) node_t(value); // construct
+        ::new(node, microc_new::blah) node_t(value); // construct
         return node;
     }
     node_t * create_node(value_type && value) {
         node_t * node = _alloc.allocate(1);
-        ::new(node, micro::blah) node_t(linked_list_traits::move(value)); // construct
+        ::new(node, microc_new::blah) node_t(linked_list_traits::move(value)); // construct
         return node;
     }
     template<class... Args>
     node_t * create_node(Args &&... args) {
         node_t * node = _alloc.allocate(1);
-        ::new (node, micro::blah) node_t(linked_list_traits::forward<Args>(args)...); // construct
+        ::new (node, microc_new::blah) node_t(linked_list_traits::forward<Args>(args)...); // construct
         return node;
     }
     iterator insert_node_internal(const_iterator pos, node_t * node) {
@@ -280,7 +283,7 @@ public:
     iterator insert(const_iterator pos, size_type count, const T & value) {
         if(count==0) return pos;
         auto first_pos = insert(pos, value);
-        for (int ix = 1; ix < count; ++ix)
+        for (size_type ix = 1; ix < count; ++ix)
             insert(pos, value);
         return first_pos;
     }

@@ -1,8 +1,6 @@
 #pragma once
 
-#ifndef MICRO_CONTAINERS_SIZE_TYPE
-#define MICRO_CONTAINERS_SIZE_TYPE unsigned long
-#endif
+#include "traits.h"
 
 #ifdef MICRO_CONTAINERS_ENABLE_THROW
 struct throw_array_out_of_range {};

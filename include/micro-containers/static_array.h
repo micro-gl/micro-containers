@@ -10,9 +10,7 @@
 ========================================================================================*/
 #pragma once
 
-#ifndef MICRO_CONTAINERS_SIZE_TYPE
-#define MICRO_CONTAINERS_SIZE_TYPE unsigned long
-#endif
+#include "traits.h"
 
 #ifdef MICRO_CONTAINERS_ENABLE_THROW
 struct throw_static_array_out_of_range {};
@@ -134,17 +132,17 @@ public:
 
     void push_back(const T & v) {
         if(_current==N) return;
-        ::new(_data + _current++) T(v);
+        ::new(_data + _current++, microc_new::blah) T(v);
     }
     void push_back(T && v) {
         if(_current==N) return;
-        ::new(_data + _current++) T(static_array_traits::move(v));
+        ::new(_data + _current++, microc_new::blah) T(static_array_traits::move(v));
     }
 
     template <class... Args>
     void emplace_back(Args&&... args) {
         if(_current==N) return;
-        ::new(_data + _current++) T(static_array_traits::forward<Args>(args)...);
+        ::new(_data + _current++, microc_new::blah) T(static_array_traits::forward<Args>(args)...);
     }
     void pop_back() {
         if(_current==0) return;

@@ -1,41 +1,8 @@
-#include <iostream>
-#include <sstream>
-
+#include "src/test_utils.h"
 #include <micro-containers/ordered_set.h>
 
-using std::to_string;
-
-struct dummy_t {
-    int a, b;
-    explicit dummy_t(int $a=0, int $b=1) : a($a), b($b) {}
-    dummy_t(dummy_t && other) : a(other.a), b(other.b) {
-        std::cout << "move ctor dummy ! \n";
-    }
-    dummy_t(const dummy_t & other) : a(other.a), b(other.b) {
-        std::cout << "copy ctor dummy ! \n";
-    }
-    bool operator<(const dummy_t& rhs) const {
-        return (a < rhs.a) || (a==rhs.a && b<rhs.b);
-    }
-};
-
-std::string to_string(const dummy_t& value) {
-    std::ostringstream os;
-    os << "{ a: " << value.a << ", b: " << value.b << "}";
-    return os.str();
-}
-
-template<class Container>
-void print_ordered_set(const Container & container) {
-    std::cout << "(";
-    for (const auto & item : container) {
-        std::cout << to_string(item) << ", ";
-    }
-    std::cout << ")" << std::endl;
-}
-
 void test_insert() {
-    std::cout << "test_insert" << std::endl;
+    print_test_header("test_insert");
 
     using set = ordered_set<int>;
     set d;
@@ -47,11 +14,11 @@ void test_insert() {
     d.insert(450);
 
     std::cout << "- printing ordered set" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
 }
 
 void test_insert_with_range() {
-    std::cout << "test_insert_with_range" << std::endl;
+    print_test_header("test_insert_with_range");
 
     using set = ordered_set<int>;
     set d_1, d_2;
@@ -69,18 +36,18 @@ void test_insert_with_range() {
     d_2.insert(351);
 
     std::cout << "- printing ordered set d1" << std::endl;
-    print_ordered_set(d_1);
+    print_simple_container(d_1);
     std::cout << "- printing ordered set d2" << std::endl;
-    print_ordered_set(d_2);
+    print_simple_container(d_2);
 
     d_1.insert(d_2.begin(), d_2.end());
 
     std::cout << "- printing ordered set d1 after insert" << std::endl;
-    print_ordered_set(d_1);
+    print_simple_container(d_1);
 }
 
 void test_erase_with_iterator() {
-    std::cout << "test_erase_with_iterator" << std::endl;
+    print_test_header("test_erase_with_iterator");
 
     using set = ordered_set<int>;
     set d;
@@ -92,7 +59,7 @@ void test_erase_with_iterator() {
     d.insert(450);
 
     std::cout << "- ordered set" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
     //
 
     const auto iter_after_erase2 = d.erase(pos2);
@@ -100,11 +67,11 @@ void test_erase_with_iterator() {
     const auto iter_after_erase3 = d.erase(pos3);
     bool invalid = iter_after_erase3==d.end();
     std::cout << "- after erase 150, 250" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
 }
 
 void test_erase_with_key() {
-    std::cout << "test_erase_with_key" << std::endl;
+    print_test_header("test_erase_with_key");
 
     using set = ordered_set<int>;
     set d;
@@ -116,7 +83,7 @@ void test_erase_with_key() {
     d.insert(450);
 
     std::cout << "- ordered set" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
     //
 
 //    d.erase(250);
@@ -124,11 +91,11 @@ void test_erase_with_key() {
     d.erase(450);
 
     std::cout << "- after erase of 250 and 450 keys" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
 }
 
 void test_erase_with_range_iterator() {
-    std::cout << "test_erase_with_range_iterator" << std::endl;
+    print_test_header("test_erase_with_range_iterator");
 
     using set = ordered_set<int>;
     set d;
@@ -140,16 +107,16 @@ void test_erase_with_range_iterator() {
 //    d.insert(450);
 
     std::cout << "- ordered set" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
     //
     d.erase(d.begin(), d.end());
 //    d.erase(d.begin(), ++d.begin());
     std::cout << "- after erase" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
 }
 
 void test_clear() {
-    std::cout << "test_clear" << std::endl;
+    print_test_header("test_clear");
 
     using set = ordered_set<int>;
     set d;
@@ -161,15 +128,15 @@ void test_clear() {
     d.insert(450);
     //
     std::cout << "- ordered set" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
 
     d.clear();
     std::cout << "- after clear" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
 }
 
 void test_find() {
-    std::cout << "test_find" << std::endl;
+    print_test_header("test_find");
 
     using set = ordered_set<int>;
     set d;
@@ -181,7 +148,7 @@ void test_find() {
     d.insert(450);
     //
     std::cout << "- ordered set" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
 
     auto iter = d.find(350);
     std::cout << "- found 350: " << to_string(*iter) << std::endl;
@@ -190,7 +157,7 @@ void test_find() {
 }
 
 void test_contains() {
-    std::cout << "test_contains" << std::endl;
+    print_test_header("test_contains");
 
     using set = ordered_set<int>;
     set d;
@@ -202,7 +169,7 @@ void test_contains() {
     d.insert(450);
     //
     std::cout << "- ordered set" << std::endl;
-    print_ordered_set(d);
+    print_simple_container(d);
 
     std::cout << "- found 350: " << to_string(d.contains(350)) << std::endl;
     std::cout << "- found -5: " << to_string(d.contains(-5)) << std::endl;
@@ -210,7 +177,7 @@ void test_contains() {
 
 // move/copy
 void test_copy_and_move_ctor() {
-    std::cout << "test_copy_and_move_ctor" << std::endl;
+    print_test_header("test_copy_and_move_ctor");
 
     using set = ordered_set<int>;
     set d_1;
@@ -222,24 +189,24 @@ void test_copy_and_move_ctor() {
     d_1.insert(450);
 
     std::cout << "- printing ordered set d1" << std::endl;
-    print_ordered_set(d_1);
+    print_simple_container(d_1);
 
     //
 
     set d2 = d_1;
 
     std::cout << "- printing ordered set d2 after copy constructing with d1" << std::endl;
-    print_ordered_set(d2);
+    print_simple_container(d2);
 
     set d3 = std::move(d_1);
     std::cout << "- printing ordered set d3 after move constructing with d1" << std::endl;
-    print_ordered_set(d3);
+    print_simple_container(d3);
     std::cout << "- printing ordered set d1" << std::endl;
-    print_ordered_set(d_1);
+    print_simple_container(d_1);
 }
 
 void test_copy_and_move_assign() {
-    std::cout << "test_copy_and_move_assign" << std::endl;
+    print_test_header("test_copy_and_move_assign");
 
     using set = ordered_set<int>;
     set d1, d2, d3;
@@ -251,22 +218,22 @@ void test_copy_and_move_assign() {
     d1.insert(450);
 
     std::cout << "- printing set d1" << std::endl;
-    print_ordered_set(d1);
+    print_simple_container(d1);
 
     d2 = d1;
 
     std::cout << "- printing set d2 after copy assign with d1" << std::endl;
-    print_ordered_set(d2);
+    print_simple_container(d2);
 
     d3 = std::move(d1);
     std::cout << "- printing set d3 after move assign with d1" << std::endl;
-    print_ordered_set(d3);
+    print_simple_container(d3);
     std::cout << "- printing set d1" << std::endl;
-    print_ordered_set(d1);
+    print_simple_container(d1);
 }
 
 void test_dummy() {
-    std::cout << "test_dummy" << std::endl;
+    print_test_header("test_dummy");
 
     using set = ordered_set<dummy_t>;
     set d1, d2, d3;
@@ -279,27 +246,27 @@ void test_dummy() {
     d1.insert(dummy_t(1, 3));
 
     std::cout << "- printing set d1" << std::endl;
-    print_ordered_set(d1);
+    print_simple_container(d1);
 }
 
 int main() {
     // modifiers
-//    test_insert();
-//    test_insert_with_range();
+    test_insert();
+    test_insert_with_range();
 
-//    test_erase_with_iterator();
-//    test_erase_with_key();
-//    test_erase_with_range_iterator();
+    test_erase_with_iterator();
+    test_erase_with_key();
+    test_erase_with_range_iterator();
 
-//    test_clear();
+    test_clear();
 
     // lookup
-//    test_find();
-//    test_contains();
+    test_find();
+    test_contains();
 
     // move/copy
-//    test_copy_and_move_ctor();
-//    test_copy_and_move_assign();
+    test_copy_and_move_ctor();
+    test_copy_and_move_assign();
     test_dummy();
 }
 

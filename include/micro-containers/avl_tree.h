@@ -35,6 +35,7 @@ public:
     using key_type = Key;
     using compare_function = Compare;
     using allocator_type = Allocator;
+    using size_type = MICRO_CONTAINERS_SIZE_TYPE;
 
 private:
     struct node_t {
@@ -87,7 +88,7 @@ private:
     Compare _compare;
     node_t * _root;
     rebind_alloc _alloc;
-    unsigned int _size;
+    size_type _size;
 
 public:
 
@@ -148,7 +149,7 @@ public:
     const node_t * root() const { return _root; }
     node_t * root() { return _root; }
     bool empty() const { return root() == nullptr; }
-    unsigned int size() const { return _size; }
+    size_type size() const { return _size; }
     const_iterator find(const Key &k) const { return const_iterator(find_node(root(), k), this); }
     bool contains(const Key &k) const { return contains(root(), k); }
     const_iterator findLowerBoundOf(const Key & key) const {
@@ -316,8 +317,8 @@ private:
                          node_t ** new_node, bool & has_succeeded, const bool move_ctor) {
         if(root == nullptr) {
             auto * mem = _alloc.allocate(1);
-            if(move_ctor) ::new (mem) node_t(micro_containers::traits::move(const_cast<Key &>(k)));
-            else ::new (mem) node_t(k);
+            if(move_ctor) ::new (mem, microc_new::blah) node_t(micro_containers::traits::move(const_cast<Key &>(k)));
+            else ::new (mem, microc_new::blah) node_t(k);
             has_succeeded=true; *new_node=mem;
             _size+=1; return mem;
         } else if(isPreceding(k, root->key)) {
