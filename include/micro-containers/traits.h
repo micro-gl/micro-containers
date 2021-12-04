@@ -20,7 +20,7 @@ template<> struct micro_hash<signed> {
     MICRO_CONTAINERS_SIZE_TYPE operator()(signed const s) const noexcept { return s & ~(1<<((sizeof(s)<<3)-1)) ; }
 };
 
-namespace micro_containers {
+namespace microc {
     namespace traits {
 
         template< class T > struct remove_reference      {typedef T type;};
@@ -81,14 +81,14 @@ namespace micro_containers {
 
         // allocator aware traits with SFINAE
         template <typename T, typename = int>
-        struct is_allocator_aware : micro_containers::traits::false_type { };
+        struct is_allocator_aware : microc::traits::false_type { };
 
         template <typename T>
         struct is_allocator_aware <T, typename conditional<false, typename T::allocator_type, int>::type> :
-                micro_containers::traits::true_type { };
+                microc::traits::true_type { };
 // another version with decltype
 //        template <typename T>
-//        struct is_allocator_aware <T, decltype((void) T().get_allocator(), 0)> : micro_containers::traits::true_type { };
+//        struct is_allocator_aware <T, decltype((void) T().get_allocator(), 0)> : microc::traits::true_type { };
 
         /**
          * standard allocator

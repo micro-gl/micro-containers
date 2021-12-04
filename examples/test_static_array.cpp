@@ -1,6 +1,8 @@
 #include "src/test_utils.h"
 #include <micro-containers/static_array.h>
 
+using namespace microc;
+
 void test_insert() {
     print_test_header("test_insert");
 

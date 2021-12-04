@@ -1,6 +1,8 @@
 #include "src/test_utils.h"
 #include <micro-containers/ordered_set.h>
 
+using namespace microc;
+
 void test_insert() {
     print_test_header("test_insert");
 

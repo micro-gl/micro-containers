@@ -1,6 +1,8 @@
 #include "src/test_utils.h"
 #include <micro-containers/forward_list.h>
 
+using namespace microc;
+
 void test_push_front() {
     print_test_header("test_push_front");
     forward_list<int> list1{};

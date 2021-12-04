@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include <micro-containers/pair.h>
+using namespace microc;
 
 using std::to_string;
 

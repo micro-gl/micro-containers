@@ -1,6 +1,7 @@
 #include "src/test_utils.h"
 #include <micro-containers/hash_set.h>
 
+using namespace microc;
 
 template<class Container>
 void print_hash_set(const Container & container) {

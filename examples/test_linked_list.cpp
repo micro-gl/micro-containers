@@ -1,6 +1,8 @@
 #include "src/test_utils.h"
 #include <micro-containers/linked_list.h>
 
+using namespace microc;
+
 void test_clear() {
     print_test_header("test_clear");
 

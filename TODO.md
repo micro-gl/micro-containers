@@ -5,8 +5,6 @@
 - stack
 - span
 - 
-- sort placement new thing
-- incorporate size_type
 - decide weather every class is stand alone
 - design some algorithms like for_each, range, etc...
 - add == operator outside for each container

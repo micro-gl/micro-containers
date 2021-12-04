@@ -1,6 +1,8 @@
 #include "src/test_utils.h"
 #include <micro-containers/dictionary.h>
 
+using namespace microc;
+
 template<class Container>
 void print_dictionary(const Container & container) {
     std::cout << "(";

@@ -1,6 +1,8 @@
 #include "src/test_utils.h"
 #include <micro-containers/hash_map.h>
 
+using namespace microc;
+
 template<class Container>
 void print_hash_map(const Container & container) {
     std::cout << "(";
