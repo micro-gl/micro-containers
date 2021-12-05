@@ -96,40 +96,44 @@ namespace microc {
         using const_pointer = const value_type *;
 
     private:
-        struct node_t {
+        struct node_base_t {
+            node_base_t() : next(nullptr) {}
+            ~node_base_t() = default;
+            node_base_t * next;
+        };
+        struct node_t : public node_base_t {
             node_t()=default;
             node_t(const value_type & $value) :
-                        next(nullptr), value($value) {}
+                    node_base_t(), value($value) {}
             node_t(value_type && $value) :
-                    next(nullptr), value(forward_list_traits::move($value)) {}
+                    node_base_t(), value(forward_list_traits::move($value)) {}
             template<class... Args>
-            node_t(Args&&... args) : next(nullptr),
+            node_t(Args&&... args) : node_base_t(),
                         value(forward_list_traits::forward<Args>(args)...) {}
-            node_t * next;
             value_type value;
         };
 
         template<class value_reference_type>
         struct iterator_t {
-            node_t * _node;
+            node_base_t * _node;
 
             template<class value_reference_type_t>
             iterator_t(const iterator_t<value_reference_type_t> & other) : _node(other._node) {}
-            explicit iterator_t(node_t * start) : _node(start) {}
+            explicit iterator_t(node_base_t * start) : _node(start) {}
             iterator_t& operator++() { _node=_node->next; return *this;}
             iterator_t operator++(int) {iterator_t retval(_node); ++(*this); return retval;}
             iterator_t operator+(size_type val) {
-                node_t * result = _node;
+                node_base_t * result = _node;
                 for (size_type ix = 0; ix < val; ++ix) result = result->next;
                 return iterator_t(result);
             }
             bool operator==(iterator_t other) const {return _node == other._node;}
             bool operator!=(iterator_t other) const {return !(*this == other);}
-            value_reference_type operator*() const {return _node->value ;}
+            value_reference_type operator*() const {return static_cast<node_t *>(_node)->value ;}
         };
 
-        node_t * non_const_node(const node_t * node) const
-        { return const_cast<node_t *>(node); }
+        node_base_t * non_const_node(const node_base_t * node) const
+        { return const_cast<node_base_t *>(node); }
 
     public:
         using iterator = iterator_t<reference>;
@@ -153,14 +157,15 @@ namespace microc {
     private:
         using rebind_allocator_type = typename Allocator::template rebind<node_t>::other;
 
-        node_t _sentinel_node; // _sentinel_node=end, _sentinel_node->next=begin
+        node_base_t _sentinel_node; // _sentinel_node=end, _sentinel_node->next=begin
         rebind_allocator_type _alloc;
-        size_type _size = 0u;
+        size_type _size;
 
         void reset_sentinel() { _sentinel_node.next = &_sentinel_node; }
 
     public:
-        explicit forward_list(const Allocator & allocator = Allocator()) noexcept : _alloc{allocator} {
+        explicit forward_list(const Allocator & allocator = Allocator()) noexcept :
+                    _sentinel_node(), _size(0), _alloc{allocator} {
             reset_sentinel();
         }
 
@@ -244,9 +249,9 @@ namespace microc {
         }
 
     private:
-        node_t * find_last_node() {
-            node_t * sentinel = &_sentinel_node;
-            node_t * current = sentinel;
+        node_base_t * find_last_node() {
+            node_base_t * sentinel = &_sentinel_node;
+            node_base_t * current = sentinel;
             while(current->next!=sentinel) {
                 current = current->next;
             }
@@ -314,7 +319,7 @@ namespace microc {
             auto * node_following_erase = node_to_erase->next;
             node_at_pos->next = node_following_erase;
             // destruct
-            node_to_erase->~node_t();
+            reinterpret_cast<node_t *>(node_to_erase)->~node_t();
             // de-allocate
             _alloc.deallocate((node_t *)node_to_erase);
             // size update

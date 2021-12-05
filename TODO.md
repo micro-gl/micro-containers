@@ -1,11 +1,10 @@
-- linked-list -> inherit node with value type so sentinel will not hold value-type
 - heap
 - priority queue
 - queue
 - stack
 - span
 - 
-- decide weather every class is stand alone
+- decide weather every class is stand alone or uses traits.h
 - design some algorithms like for_each, range, etc...
 - add == operator outside for each container
 - add insert/erase by iterator to dynamic array and static array
