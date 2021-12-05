@@ -233,6 +233,9 @@ void test_back_and_front() {
     list1.push_back(4);
     list1.push_back(5);
 
+    std::cout << "list1 is " << std::endl;
+    print_simple_container(list1);
+
     std::cout << "front:" << list1.front() << std::endl;
     std::cout << "back:" << list1.back() << std::endl;
 }

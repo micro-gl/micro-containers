@@ -159,12 +159,13 @@ namespace microc {
 
         node_base_t _sentinel_node; // _sentinel_node=end, _sentinel_node->next=begin
         rebind_allocator_type _alloc;
-        size_type _size = 0u;
+        size_type _size;
 
         void reset_sentinel() { _sentinel_node.prev = _sentinel_node.next = &_sentinel_node; }
 
     public:
-        explicit linked_list(const Allocator & allocator = Allocator()) noexcept : _alloc{allocator} {
+        explicit linked_list(const Allocator & allocator = Allocator()) noexcept :
+                _sentinel_node(), _size(0), _alloc{allocator} {
             reset_sentinel();
         }
 
