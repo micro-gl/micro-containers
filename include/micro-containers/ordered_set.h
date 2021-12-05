@@ -29,8 +29,8 @@ namespace microc {
      * Notes:
      * - Most algorithms use recursion, so there is a stack memory cost of O(log(n))
      * - This class is Allocator-Aware
-     * @tparam Key the key type, that the tree stores
-     * @tparam Compare compare structure or lambda for key
+     * @tparam Key the item type, that the tree stores
+     * @tparam Compare compare structure or lambda for item
      * @tparam Allocator allocator type
      */
     template<class Key,
@@ -69,7 +69,7 @@ namespace microc {
         };
 
     public:
-        using tree_type = avl_tree<value_type, value_compare, Allocator>;
+        using tree_type = avl_tree<value_type, value_type, value_compare, avl_key_extract<value_type, value_type>, Allocator>;
         using node_type = typename tree_type::node_type;
         using iterator = iterator_t<value_type &, typename tree_type::iterator>;
         using const_iterator = iterator_t<const value_type &, typename tree_type::const_iterator>;

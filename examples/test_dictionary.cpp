@@ -28,10 +28,23 @@ void test_insert_with_perfect_forward() {
     print_dictionary(d);
 }
 
+
+template<class Key>
+struct lless {
+    bool operator()(const Key& lhs, const Key& rhs) const
+    {return lhs < rhs;}
+};
+
+template<class Key>
+struct lless2 {
+    bool operator()(const Key& lhs, const Key& rhs) const
+    {return lhs < rhs;}
+};
+
 void test_insert() {
     print_test_header("test_insert");
 
-    using dict = dictionary<int, int>;
+    using dict = dictionary<int, int, lless<int>>;
     dict d;
 
     d.insert(pair<int, int>(50, 50));
@@ -50,17 +63,17 @@ void test_insert_with_range() {
     using dict = dictionary<int, int>;
     dict d_1, d_2;
 
-    d_1.insert(pair<int, int>(50, 50));
-    d_1.insert(pair<int, int>(150, 150));
-    d_1.insert(pair<int, int>(250, 250));
-    d_1.insert(pair<int, int>(350, 350));
-    d_1.insert(pair<int, int>(450, 450));
+    d_1.insert(50, 50);
+    d_1.insert(150, 150);
+    d_1.insert(250, 250);
+    d_1.insert(350, 350);
+    d_1.insert(450, 450);
 
-    d_2.insert(pair<int, int>(0, 0));
-    d_2.insert(pair<int, int>(1, 1));
-    d_2.insert(pair<int, int>(2, 2));
-    d_2.insert(pair<int, int>(350, 350));
-    d_2.insert(pair<int, int>(351, 351));
+    d_2.insert(0, 0);
+    d_2.insert(1, 1);
+    d_2.insert(2, 2);
+    d_2.insert(350, 350);
+    d_2.insert(351, 351);
 
     std::cout << "- printing dictionary d1" << std::endl;
     print_dictionary(d_1);
@@ -79,11 +92,11 @@ void test_erase_with_iterator() {
     using dict = dictionary<int, int>;
     dict d;
 
-    auto pos1 = d.insert(pair<int, int>(50, 50)).first;
-    auto pos2 = d.insert(pair<int, int>(150, 150)).first;
-    auto pos3 = d.insert(pair<int, int>(250, 250)).first;
-    d.insert(pair<int, int>(350, 350));
-    d.insert(pair<int, int>(450, 450));
+    auto pos1 = d.insert(50, 50).first;
+    auto pos2 = d.insert(150, 150).first;
+    auto pos3 = d.insert(250, 250).first;
+    d.insert(350, 350);
+    d.insert(450, 450);
 
     std::cout << "- dictionary" << std::endl;
     print_dictionary(d);
@@ -103,11 +116,11 @@ void test_erase_with_key() {
     using dict = dictionary<int, int>;
     dict d;
 
-    d.insert(pair<int, int>(50, 50));
-    d.insert(pair<int, int>(150, 150));
-    d.insert(pair<int, int>(250, 250));
-    d.insert(pair<int, int>(350, 350));
-    d.insert(pair<int, int>(450, 450));
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
 
     std::cout << "- dictionary" << std::endl;
     print_dictionary(d);
@@ -127,11 +140,11 @@ void test_erase_with_range_iterator() {
     using dict = dictionary<int, int>;
     dict d;
 
-    d.insert(pair<int, int>(50, 50));
-    d.insert(pair<int, int>(150, 150));
-    d.insert(pair<int, int>(250, 250));
-    d.insert(pair<int, int>(350, 350));
-//    d.insert(pair<int, int>(450, 450));
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+//    d.insert(450, 450);
 
     std::cout << "- dictionary" << std::endl;
     print_dictionary(d);
@@ -148,11 +161,11 @@ void test_clear() {
     using dict = dictionary<int, int>;
     dict d;
 
-    d.insert(pair<int, int>(50, 50));
-    d.insert(pair<int, int>(150, 150));
-    d.insert(pair<int, int>(250, 250));
-    d.insert(pair<int, int>(350, 350));
-    d.insert(pair<int, int>(450, 450));
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
     //
     std::cout << "- dictionary" << std::endl;
     print_dictionary(d);
@@ -168,17 +181,17 @@ void test_find() {
     using dict = dictionary<int, int>;
     dict d;
 
-    d.insert(pair<int, int>(50, 50));
-    d.insert(pair<int, int>(150, 150));
-    d.insert(pair<int, int>(250, 250));
-    d.insert(pair<int, int>(350, 350));
-    d.insert(pair<int, int>(450, 450));
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
     //
     std::cout << "- dictionary" << std::endl;
     print_dictionary(d);
 
     auto iter = d.find(350);
-    std::cout << "- found 350: " << to_string(*iter) << std::endl;
+    std::cout << "- found 350: " << to_string(*iter, true) << std::endl;
     iter = d.find(-5);
     std::cout << "- found -5 ? iter==d.end(): " << to_string(iter==d.end()) << std::endl;
 }
@@ -189,11 +202,11 @@ void test_contains() {
     using dict = dictionary<int, int>;
     dict d;
 
-    d.insert(pair<int, int>(50, 50));
-    d.insert(pair<int, int>(150, 150));
-    d.insert(pair<int, int>(250, 250));
-    d.insert(pair<int, int>(350, 350));
-    d.insert(pair<int, int>(450, 450));
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
     //
     std::cout << "- dictionary" << std::endl;
     print_dictionary(d);
@@ -210,11 +223,11 @@ void test_at() {
     using dict = dictionary<int, int>;
     dict d;
 
-    d.insert(pair<int, int>(50, 50));
-    d.insert(pair<int, int>(150, 150));
-    d.insert(pair<int, int>(250, 250));
-    d.insert(pair<int, int>(350, 350));
-    d.insert(pair<int, int>(450, 450));
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
     //
     std::cout << "- dictionary" << std::endl;
     print_dictionary(d);
@@ -231,11 +244,11 @@ void test_access_operator() {
     using dict = dictionary<int, int>;
     dict d;
 
-    d.insert(pair<int, int>(50, 50));
-    d.insert(pair<int, int>(150, 150));
-    d.insert(pair<int, int>(250, 250));
-    d.insert(pair<int, int>(350, 350));
-    d.insert(pair<int, int>(450, 450));
+    d.insert(50, 50);
+    d.insert(150, 150);
+    d.insert(250, 250);
+    d.insert(350, 350);
+    d.insert(450, 450);
     //
     std::cout << "- dictionary" << std::endl;
     print_dictionary(d);
@@ -244,6 +257,9 @@ void test_access_operator() {
     auto & value_1 = d[150];
 
     std::cout << "- dict[150] is " << d[150] << std::endl;
+
+    std::cout << "- dictionary" << std::endl;
+    print_dictionary(d);
 }
 
 // move/copy
@@ -253,11 +269,11 @@ void test_copy_and_move_ctor() {
     using dict = dictionary<int, int>;
     dict d_1;
 
-    d_1.insert(pair<int, int>(50, 50));
-    d_1.insert(pair<int, int>(150, 150));
-    d_1.insert(pair<int, int>(250, 250));
-    d_1.insert(pair<int, int>(350, 350));
-    d_1.insert(pair<int, int>(450, 450));
+    d_1.insert(50, 50);
+    d_1.insert(150, 150);
+    d_1.insert(250, 250);
+    d_1.insert(350, 350);
+    d_1.insert(450, 450);
 
     std::cout << "- printing dictionary d1" << std::endl;
     print_dictionary(d_1);
@@ -282,11 +298,11 @@ void test_copy_and_move_assign() {
     using dict = dictionary<int, int>;
     dict d1, d2, d3;
 
-    d1.insert(pair<int, int>(50, 50));
-    d1.insert(pair<int, int>(150, 150));
-    d1.insert(pair<int, int>(250, 250));
-    d1.insert(pair<int, int>(350, 350));
-    d1.insert(pair<int, int>(450, 450));
+    d1.insert(50, 50);
+    d1.insert(150, 150);
+    d1.insert(250, 250);
+    d1.insert(350, 350);
+    d1.insert(450, 450);
 
     std::cout << "- printing dictionary d1" << std::endl;
     print_dictionary(d1);
@@ -314,16 +330,16 @@ int main() {
     test_erase_with_range_iterator();
 
     test_clear();
-
-    // lookup
+//
+//    // lookup
     test_find();
     test_contains();
-
-    // Element Access
+//
+//    // Element Access
     test_at();
     test_access_operator();
-
-    // move/copy
+//
+//    // move/copy
     test_copy_and_move_ctor();
     test_copy_and_move_assign();
 }

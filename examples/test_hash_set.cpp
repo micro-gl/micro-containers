@@ -226,11 +226,11 @@ void test_contains() {
     print_hash_set(d);
 
     for (const auto & item : d) {
-        std::cout << "- does set contains " << to_string(item)
+        std::cout << "- does set internal_contains " << to_string(item)
                   << " ? " << d.contains(item) << std::endl;
     }
 
-    std::cout << "- does set contains " << 5
+    std::cout << "- does set internal_contains " << 5
               << " ? " << d.contains(5) << std::endl;
 
 }

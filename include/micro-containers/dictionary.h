@@ -29,9 +29,9 @@ namespace microc {
      * Notes:
      * - Most algorithms use recursion, so there is a stack memory cost of O(log(n))
      * - This class is Allocator-Aware
-     * @tparam Key the key type, that the tree stores
-     * @tparam T The mapped value type of a key
-     * @tparam Compare compare structure or lambda for key
+     * @tparam Key the item type, that the tree stores
+     * @tparam T The mapped value type of a item
+     * @tparam Compare compare structure or lambda for item
      * @tparam Allocator allocator type
      */
     template<class Key, class T,
@@ -51,9 +51,14 @@ namespace microc {
         using const_pointer = const value_type *;
         struct value_compare {
             Compare _compare;
-            value_compare(Compare c) : _compare(c) {}
-            bool operator()( const value_type& lhs, const value_type& rhs ) const
-            { return _compare(lhs.first, rhs.first); }
+            explicit value_compare(Compare c) : _compare(c) {}
+            bool operator()( const key_type& lhs, const key_type& rhs ) const
+            { return _compare(lhs, rhs); }
+        };
+        struct key_extractor {
+            using key = Key;
+            using item = value_type;
+            const Key & operator()(const value_type &whole) const { return whole.first; }
         };
 
     private:
@@ -70,13 +75,11 @@ namespace microc {
             iterator_t operator--(int) {iterator_t retval(_pos); --(*this); return retval;}
             bool operator==(iterator_t other) const {return _pos == other._pos;}
             bool operator!=(iterator_t other) const {return !(*this == other);}
-            value_reference_type operator*() const {return (*_pos); } // key in tree is pair<key, T> ;}
+            value_reference_type operator*() const {return (*_pos); } // item in tree is pair<item, T> ;}
         };
 
-        static const T DUMMY;
-
     public:
-        using tree_type = avl_tree<value_type, value_compare, Allocator>;
+        using tree_type = avl_tree<value_type, key_type, value_compare, key_extractor, Allocator>;
         using node_type = typename tree_type::node_type;
         using iterator = iterator_t<value_type &, typename tree_type::iterator>;
         using const_iterator = iterator_t<const value_type &, typename tree_type::const_iterator>;
@@ -97,7 +100,6 @@ namespace microc {
         rebind_alloc _alloc;
 
     public:
-
         dictionary(const Compare & comp,
                    const Allocator & allocator=Allocator()) :
                 _key_compare(comp), _alloc(allocator),
@@ -156,17 +158,17 @@ namespace microc {
 
         // lookup
         iterator find(const Key& key) {
-            auto tree_iter = _tree.find(value_type(key, dictionary::DUMMY));
+            auto tree_iter = _tree.find_by_key(key);
             auto iter_dict = iterator(tree_iter);
             return iter_dict;
         }
         const_iterator find(const Key& key) const {
-            auto tree_iter = _tree.find(value_type(key, dictionary::DUMMY));
+            auto tree_iter = _tree.find_by_key(key);
             auto iter_dict = const_iterator(tree_iter);
             return iter_dict;
         }
         bool contains(const Key& key) const {
-            return _tree.contains(value_type(key, dictionary::DUMMY));
+            return _tree.contains_by_key(key);
         }
 
         // element access
@@ -226,7 +228,7 @@ namespace microc {
         }
         unsigned erase(const Key& key) {
             auto tree_size = _tree.size();
-            auto tree_iter = _tree.remove(value_type(key, dictionary::DUMMY));
+            auto tree_iter = _tree.remove_by_key(key);
             return tree_size - _tree.size();
         }
         iterator erase(iterator pos) { return iterator(_tree.remove(*pos)); }
@@ -237,9 +239,4 @@ namespace microc {
             return current;
         }
     };
-
-    template<class Key, class T,
-            class Compare,
-            class Allocator>
-    const T dictionary<Key, T, Compare, Allocator>::DUMMY = T();
 }

@@ -6,7 +6,7 @@ using namespace microc;
 void test_insert() {
     print_test_header("test_insert");
 
-    using avl_t = avl_tree<int, microc::avl_less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl;
 
     avl.insert(100);
@@ -23,7 +23,7 @@ void test_insert() {
 void test_remove() {
     print_test_header("test_remove");
 
-    using avl_t = avl_tree<int, microc::avl_less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl;
 
     avl.insert(100);
@@ -49,7 +49,7 @@ void test_remove() {
 void test_clear() {
     print_test_header("test_clear");
 
-    using avl_t = avl_tree<int, microc::avl_less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl;
 
     avl.insert(100);
@@ -72,7 +72,7 @@ void test_clear() {
 void test_find() {
     print_test_header("test_find");
 
-    using avl_t = avl_tree<int, microc::avl_less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl;
 
     avl.insert(100);
@@ -92,7 +92,7 @@ void test_find() {
 void test_max_min() {
     print_test_header("test_max_min");
 
-    using avl_t = avl_tree<int, microc::avl_less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl;
 
     avl.insert(100);
@@ -114,7 +114,7 @@ void test_max_min() {
 void test_successor() {
     print_test_header("test_successor");
 
-    using avl_t = avl_tree<int, microc::avl_less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl;
 
     avl.insert(100);
@@ -145,7 +145,7 @@ void test_successor() {
 void test_predecessor() {
     print_test_header("test_predecessor");
 
-    using avl_t = avl_tree<int, microc::avl_less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl;
 
     avl.insert(100);
@@ -176,7 +176,7 @@ void test_predecessor() {
 void test_contains() {
     print_test_header("test_contains");
 
-    using avl_t = avl_tree<int, microc::avl_less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl;
 
     avl.insert(100);
@@ -196,7 +196,7 @@ void test_contains() {
 void test_iterator() {
     print_test_header("test_iterator");
 
-    using avl_t = avl_tree<int, microc::avl_less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl;
 
     avl.insert(100);
@@ -226,7 +226,7 @@ void test_iterator() {
 void test_copy_and_move_ctor() {
     print_test_header("test_copy_and_move_ctor");
 
-    using avl_t = avl_tree<int, microc::avl_less<int>>;
+    using avl_t = avl_tree<int>;
     avl_t avl1;
 
     avl1.insert(100);

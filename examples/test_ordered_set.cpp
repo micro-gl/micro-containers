@@ -88,8 +88,7 @@ void test_erase_with_key() {
     print_simple_container(d);
     //
 
-//    d.erase(250);
-//    d.erase(450);
+    d.erase(250);
     d.erase(450);
 
     std::cout << "- after erase of 250 and 450 keys" << std::endl;

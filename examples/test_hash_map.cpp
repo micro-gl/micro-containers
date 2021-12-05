@@ -242,11 +242,11 @@ void test_contains() {
     print_hash_map(d);
 
     for (const auto & item : d) {
-        std::cout << "- does map contains " << to_string(item.first)
+        std::cout << "- does map internal_contains " << to_string(item.first)
                   << " ? " << d.contains(item.first) << std::endl;
     }
 
-    std::cout << "- does map contains " << 5
+    std::cout << "- does map internal_contains " << 5
               << " ? " << d.contains(5) << std::endl;
 
 }

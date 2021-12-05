@@ -22,8 +22,8 @@ namespace microc {
      * Hash-set is an un-ordered associative data structure also known as Hash-Table
      * Notes:
      * - This class is Allocator-Aware
-     * @tparam Key the key type, that the tree stores
-     * @tparam Hash The hash struct/function must implement `size_type operator()(const Key & key) const `
+     * @tparam Key the item type, that the tree stores
+     * @tparam Hash The hash struct/function must implement `size_type operator()(const Key & item) const `
      * @tparam Allocator allocator type
      */
     template<class Key,

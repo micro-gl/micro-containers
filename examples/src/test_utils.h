@@ -29,7 +29,7 @@ template<class U1, class U2>
 std::string to_string(const pair<U1, U2>& value, bool compact=false) {
     std::ostringstream os;
     if(!compact)
-        os << "\n{\n" << "  key: \n    " << to_string(value.first) << ", \n  value: \n    "
+        os << "\n{\n" << "  k: \n    " << to_string(value.first) << ", \n  v: \n    "
            << to_string(value.second) << "\n},";
     else
         os << "{" << "k: " << to_string(value.first) << ", v: "

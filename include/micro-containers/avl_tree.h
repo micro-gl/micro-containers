@@ -13,9 +13,22 @@
 #include "traits.h"
 
 namespace microc {
+    /**
+     * Interface for key comparison
+     */
     template<class Key>
     struct avl_less {
         bool operator()(const Key &lhs, const Key &rhs) const { return lhs < rhs; }
+    };
+
+    /**
+     * This function extracts reference to the key of a stored item
+     */
+    template<class Item, class Key>
+    struct avl_key_extract {
+        using key = Key;
+        using item = Item;
+        const Key & operator()(const Item &whole) const { return whole; }
     };
 
     /**
@@ -23,31 +36,37 @@ namespace microc {
      * Notes:
      * - Most algorithms use recursion, so there is a stack memory cost of O(log(n))
      * - This class is Allocator-Aware
-     * @tparam Key the key type, that the tree stores
-     * @tparam Compare _compare structure or lambda
+     * @tparam StoreItemType The item type, that the tree stores
+     * @tparam Key The key type, that is used to identify StoreItemType, usually a sub-type of StoreItemType
+     * @tparam Compare compare structure or lambda
+     * @tparam KeyExtractFunction (Optional) Extract a key from the stored item object
      * @tparam Allocator allocator type
      */
-    template<class Key,
-            class Compare=avl_less<Key>,
-            class Allocator=microc::traits::std_allocator<char>>
+    template<class StoreItemType,
+             class Key=StoreItemType,
+             class Compare=avl_less<Key>,
+             class KeyExtractFunction=avl_key_extract<StoreItemType, Key>,
+             class Allocator=microc::traits::std_allocator<char>>
     class avl_tree {
     public:
+        using store_item_type = StoreItemType;
         using key_type = Key;
         using compare_function = Compare;
+        using key_extract_function = KeyExtractFunction;
         using allocator_type = Allocator;
         using size_type = MICRO_CONTAINERS_SIZE_TYPE;
 
     private:
         struct node_t {
-            Key key;
+            StoreItemType item;
             int height;
             node_t *left, *right;
 
-            node_t(const Key &k) : key(k), left(nullptr),
-                                   right(nullptr), height(-1) {}
+            explicit node_t(const StoreItemType &k) : item(k), left(nullptr),
+                                             right(nullptr), height(-1) {}
 
-            node_t(Key &&k) : key(microc::traits::move(k)), left(nullptr),
-                              right(nullptr), height(-1) {}
+            explicit node_t(StoreItemType &&k) : item(microc::traits::move(k)), left(nullptr),
+                                        right(nullptr), height(-1) {}
         };
 
         template<class value_reference_type>
@@ -66,12 +85,10 @@ namespace microc {
                 _n = _t->successor(_n);
                 return *this;
             }
-
             iterator_t &operator--() {
                 _n = _n ? _t->predecessor(_n) : _t->maximum_node(_t->root());
                 return *this;
             }
-
             iterator_t operator++(int) {
                 iterator_t ret(_n, _t);
                 ++(*this);
@@ -84,13 +101,13 @@ namespace microc {
             }
             bool operator==(iterator_t o) const { return _n == o._n; }
             bool operator!=(iterator_t o) const { return !(*this == o); }
-            value_reference_type operator*() const { return (*ncn(_n)).key; }
+            value_reference_type operator*() const { return (*ncn(_n)).item; }
         };
 
     public:
         using node_type = node_t;
-        using iterator = iterator_t<Key &>;
-        using const_iterator = iterator_t<const Key &>;
+        using iterator = iterator_t<StoreItemType &>;
+        using const_iterator = iterator_t<const StoreItemType &>;
         using rebind_alloc = typename Allocator::template rebind<node_type>::other;
         using insert_result = struct insert_result_t {
             const_iterator first; bool second;
@@ -105,9 +122,12 @@ namespace microc {
         iterator end() noexcept { return iterator{nullptr, this}; }
         const_iterator end() const noexcept { return const_iterator{nullptr, this}; }
         const_iterator cend() const noexcept { return end(); }
+        const key_type & extract_key(const StoreItemType & item) const
+        { return _partial(item); }
 
     private:
         Compare _compare;
+        key_extract_function _partial;
         node_t *_root;
         rebind_alloc _alloc;
         size_type _size;
@@ -115,7 +135,7 @@ namespace microc {
     public:
         avl_tree(const Compare &comp,
                  const Allocator &allocator = Allocator()) :
-                _compare(comp), _alloc(allocator), _root(nullptr), _size(0) {};
+                _partial(), _compare(comp), _alloc(allocator), _root(nullptr), _size(0) {};
         avl_tree(const Allocator &allocator = Allocator()) :
                 avl_tree(Compare(), allocator) {};
         avl_tree(const avl_tree &other, const Allocator &allocator) :
@@ -174,18 +194,20 @@ namespace microc {
         node_t *root() { return _root; }
         bool empty() const { return root() == nullptr; }
         size_type size() const { return _size; }
-        const_iterator find(const Key &k) const { return const_iterator(find_node(root(), k), this); }
-        bool contains(const Key &k) const { return contains(root(), k); }
+        const_iterator find(const StoreItemType &k) const { return const_iterator(find_node(root(), extract_key(k)), this); }
+        const_iterator find_by_key(const key_type &k) const { return const_iterator(find_node_by_key(root(), k), this); }
+        bool contains(const StoreItemType &k) const { return internal_contains(root(), extract_key(k)); }
+        bool contains_by_key(const key_type &k) const { return internal_contains_by_key(root(), k); }
 
-        const_iterator findLowerBoundOf(const Key &key) const {
+        const_iterator findLowerBoundOf(const StoreItemType &key) const {
             const node_t *root = root();
             node_t *candidate = nullptr;
             while (root != nullptr) {
                 bool has_left = root->left != nullptr;
                 bool has_right = root->right != nullptr;
-                // if _root key is before me, then he might be a candidate,
+                // if _root item is before me, then he might be a candidate,
                 // let's store it, and try to get better
-                if (!isPreceding(key, root->key)) {
+                if (!isPreceding(key, root->item)) {
                     candidate = root;
                     // let's try to get a bigger lower bound
                     if (has_right) root = root->right;
@@ -197,15 +219,15 @@ namespace microc {
             }
             return const_iterator(candidate, this);
         }
-        const_iterator findUpperBoundOf(const Key &key) const {
+        const_iterator findUpperBoundOf(const StoreItemType &key) const {
             const node_t *root = root();
             node_t *candidate = nullptr;
             while (root != nullptr) {
                 bool has_left = root->left != nullptr;
                 bool has_right = root->right != nullptr;
-                // if _root key is before me, then he might be a candidate,
+                // if _root item is before me, then he might be a candidate,
                 // let's store it, and try to get better
-                if (isPreceding(key, root->key)) {
+                if (isPreceding(key, root->item)) {
                     candidate = root;
                     // let's try to get a bigger lower bound
                     if (has_left) root = root->left;
@@ -222,22 +244,22 @@ namespace microc {
         const_iterator maximum() const { return const_iterator(maximum_node(root()), this); }
 
         void clear() {
-            while (!empty()) { _root = remove_node(root(), nullptr, root()->key); }
+            while (!empty()) { _root = remove_node_by_key(root(), nullptr, extract_key(root()->item)); }
             _size = 0;
         }
 
         // inserts, return the new root
         // todo: make it proper for move semantics with template, that constructs
-        insert_result insert(const Key &k) {
+        insert_result insert(const StoreItemType &k) {
             node_t *new_node = nullptr;
             bool has_succeeded = false;
             _root = insert_node(root(), k, &new_node, has_succeeded, false);
             return insert_result(const_iterator(new_node, this), has_succeeded);
         }
-        insert_result insert(Key &&k) {
+        insert_result insert(StoreItemType &&item) {
             node_t *new_node = nullptr;
             bool has_succeeded = false;
-            _root = insert_node(root(), k,
+            _root = insert_node(root(), item,
                                 &new_node, has_succeeded, true);
             return insert_result(const_iterator(new_node, this), has_succeeded);
         }
@@ -245,42 +267,49 @@ namespace microc {
         insert_result insert_emplace(Args &&... args) {
             node_t *new_node = nullptr;
             bool has_succeeded = false;
-            _root = insert_node(root(), Key(microc::traits::forward<Args>(args)...),
+            _root = insert_node(root(), StoreItemType(microc::traits::forward<Args>(args)...),
                                 &new_node, has_succeeded, true);
             return insert_result(const_iterator(new_node, this), has_succeeded);
         }
 
         // returns the new root
-        const_iterator remove(const Key &k) {
-            // todo: take advantage of find node result to make remove_node faster
-            const node_t *node = find_node(root(), k);
+        const_iterator remove(const StoreItemType &item) {
+            return remove_by_key(extract_key(item));
+        }
+        const_iterator remove_by_key(const key_type &k) {
+            // todo: take advantage of find node result to make remove_node_by_partial_key faster
+            const node_t *node = find_node_by_key(root(), k);
             const bool has_found_node = node != nullptr;
             const node_t *next_node = nullptr;
             if (has_found_node) {
                 next_node = successor(node, root());
-                _root = remove_node(root(), nullptr, k);
+                _root = remove_node_by_key(root(), nullptr, k);
                 _size -= 1;
             }
             return const_iterator(next_node, this);
         }
 
         // _compare keys
-        bool isPreceding(const Key &lhs, const Key &rhs) const { return _compare(lhs, rhs); }
-        bool isPrecedingOrEqual(const Key &lhs, const Key &rhs) const
+        bool isPreceding(const key_type &lhs, const key_type &rhs) const { return _compare(lhs, rhs); }
+        bool isPrecedingOrEqual(const key_type &lhs, const key_type &rhs) const
         { return _compare(lhs, rhs) || isEqual(lhs, rhs); }
-        bool isSucceeding(const Key &lhs, const Key &rhs) const { return _compare(rhs, lhs); }
-        bool isEqual(const Key &lhs, const Key &rhs) const { return !_compare(lhs, rhs) && !_compare(rhs, lhs); }
+        bool isSucceeding(const key_type &lhs, const key_type &rhs) const { return _compare(rhs, lhs); }
+        bool isEqual(const key_type &lhs, const key_type &rhs) const { return !_compare(lhs, rhs) && !_compare(rhs, lhs); }
 
     private:
-        const node_t *find_node(const node_t *root, const Key &k) const {
+        const node_t *find_node_by_key(const node_t *root, const key_type &k) const {
             const node_t *iter = root;
             while (iter != nullptr) {
-                if (isEqual(k, iter->key)) return iter;
-                iter = isPreceding(k, iter->key) ? iter->left : iter->right;
+                if (isEqual(k, extract_key(iter->item))) return iter;
+                iter = isPreceding(k, extract_key(iter->item)) ? iter->left : iter->right;
             }
             return nullptr;
         }
-        bool contains(const node_t *root, const Key &k) const { return find_node(root, k) != nullptr; }
+        const node_t *find_node(const node_t *root, const StoreItemType &item) const {
+            return find_node_by_key(root, extract_key(item));
+        }
+        bool internal_contains(const node_t *root, const StoreItemType &k) const { return internal_contains_by_key(root, extract_key(k)); }
+        bool internal_contains_by_key(const node_t *root, const key_type &k) const { return find_node_by_key(root, k) != nullptr; }
         const node_t *successor(const node_t *node) const { return successor(node, root()); }
         const node_t *successor(const node_t *node, const node_t *root) const {
             if (node == nullptr) return nullptr;
@@ -288,10 +317,10 @@ namespace microc {
             const node_t *succ = nullptr;
             // Start from root and search for successor down the tree
             while (root) {
-                if (isPreceding(node->key, root->key)) {
+                if (isPreceding(extract_key(node->item), extract_key(root->item))) {
                     succ = root;
                     root = root->left;
-                } else if (isPreceding(root->key, node->key))
+                } else if (isPreceding(extract_key(root->item), extract_key(node->item)))
                     root = root->right;
                 else break;
             }
@@ -305,9 +334,9 @@ namespace microc {
             const node_t *pred = nullptr;
             // Start from root and search for predecessor down the tree
             while (root) {
-                if (isPreceding(node->key, root->key)) {
+                if (isPreceding(node->item, root->item)) {
                     root = root->left;
-                } else if (isPreceding(root->key, node->key)) {
+                } else if (isPreceding(root->item, node->item)) {
                     pred = root;
                     root = root->right;
                 } else break;
@@ -338,27 +367,27 @@ namespace microc {
             return iter;
         }
         /**
-         * Insert a key
+         * Insert a item
          * @param root Tree root
-         * @param k key
-         * @param new_node New node or existing if key is already present
+         * @param item item
+         * @param new_node New node or existing if item is already present
          * @param has_succeeded True if new node created. False, otherwise;
          * @return The new root of the tree
          */
-        node_t *insert_node(node_t *root, const Key &k, // root is a sub tree root
+        node_t *insert_node(node_t *root, const StoreItemType &item, // root is a sub tree root
                             node_t **new_node, bool &has_succeeded, const bool move_ctor) {
             if (root == nullptr) {
                 auto *mem = _alloc.allocate(1);
-                if (move_ctor) ::new(mem, microc_new::blah) node_t(microc::traits::move(const_cast<Key &>(k)));
-                else ::new(mem, microc_new::blah) node_t(k);
+                if (move_ctor) ::new(mem, microc_new::blah) node_t(microc::traits::move(const_cast<StoreItemType &>(item)));
+                else ::new(mem, microc_new::blah) node_t(item);
                 has_succeeded = true;
                 *new_node = mem;
                 _size += 1;
                 return mem;
-            } else if (isPreceding(k, root->key)) {
-                root->left = insert_node(root->left, k, new_node, has_succeeded, move_ctor);
-            } else if (isSucceeding(k, root->key)) {
-                root->right = insert_node(root->right, k, new_node, has_succeeded, move_ctor);
+            } else if (isPreceding(extract_key(item), extract_key(root->item))) {
+                root->left = insert_node(root->left, item, new_node, has_succeeded, move_ctor);
+            } else if (isSucceeding(extract_key(item), extract_key(root->item))) {
+                root->right = insert_node(root->right, item, new_node, has_succeeded, move_ctor);
             } else {
                 has_succeeded = false;
                 *new_node = root;
@@ -406,16 +435,19 @@ namespace microc {
         /**
          * Remove a root
          * @param root Tree root
-         * @param k key
+         * @param k item
          * @param next_node Next root after removal
          * @return The new root
          */
-        node_t *remove_node(node_t *root, node_t *root_parent, const Key &k) {
+        node_t *remove_node(node_t *root, node_t *root_parent, const StoreItemType &k) {
+            return remove_node_by_key(root, root_parent, extract_key(k));
+        }
+        node_t *remove_node_by_key(node_t *root, node_t *root_parent, const key_type &k) {
             if (root == nullptr) return nullptr;
-            else if (isPreceding(k, root->key)) {
-                root->left = remove_node(root->left, root, k);
-            } else if (isPreceding(root->key, k)) {
-                root->right = remove_node(root->right, root, k);
+            else if (isPreceding(k, extract_key(root->item))) {
+                root->left = remove_node_by_key(root->left, root, k);
+            } else if (isPreceding(extract_key(root->item), k)) {
+                root->right = remove_node_by_key(root->right, root, k);
             } else {
                 if (root->left == nullptr || root->right == nullptr) {
                     //  if is leaf
@@ -424,14 +456,14 @@ namespace microc {
                     node_to_remove->~node_t();
                     _alloc.deallocate(node_to_remove);
                 } else {
-                    //  replace with successor = left most in right tree, and then remove_node successor
+                    //  replace with successor = left most in right tree, and then remove_node_by_partial_key successor
                     pair_node min = minimum_node_with_parent(const_cast<node_t *>(root->right),
                                                              const_cast<node_t *>(root));
                     auto *successor = min.first;
                     auto *og_successor_parent = min.second;
                     auto result = swap_nodes(root, root_parent, successor, og_successor_parent);
                     root = result.first;
-                    root->right = remove_node(root->right, root, k);
+                    root->right = remove_node_by_key(root->right, root, k);
                 }
             }
             if (root) root = re_balance(root);
