@@ -15,18 +15,16 @@
 namespace microc {
 
     /**
-     * Stack is an Adaptor type, that uses other type for container
+     * Queue is an Adaptor type, that uses other type for container
      * @tparam T item type
      * @tparam Container The type of the underlying container to use to store the elements.
      * The container must satisfy the requirements of SequenceContainer. Additionally, it must
      * provide the following functions with the usual semantics:
-     * - back(), push_back(), pop_back()
-     * The standard containers vector, deque and linked_list satisfy these requirements. By default,
-     * if no container class is specified for a particular stack class instantiation,
-     * the standard container std::deque is used.
+     * - back(), front(), push_back(), pop_front()
+     * The standard containers deque and linked_list satisfy these requirements.
      */
     template <class T, class Container>
-    class stack {
+    class queue {
     public:
         using value_type = typename Container::value_type;
         using container_type = Container;
@@ -39,38 +37,40 @@ namespace microc {
 
     public:
         // ctors
-        explicit stack(const Container& cont) : c(cont) {};
-        stack() : stack(Container()) {}
-        explicit stack(Container&& cont) : c(microc::traits::move(cont)) {}
-        stack(const stack & other) : stack(other.c) {};
-        stack(stack && other) noexcept : stack(microc::traits::move(other.c)) {};
+        explicit queue(const Container& cont) : c(cont) {};
+        queue() : queue(Container()) {}
+        explicit queue(Container&& cont) : c(microc::traits::move(cont)) {}
+        queue(const queue & other) : queue(other.c) {};
+        queue(queue && other) noexcept : queue(microc::traits::move(other.c)) {};
         template< class InputIt >
-        stack(InputIt first, InputIt last) : stack() {
+        queue(InputIt first, InputIt last) : queue() {
             InputIt current = first;
             while(current != last) {
                 push(*current); ++current;
             }
         }
         template<class Alloc>
-        explicit stack(const Alloc& alloc) : stack(Container(alloc)) {}
+        explicit queue(const Alloc& alloc) : queue(Container(alloc)) {}
         template<class Alloc>
-        stack(const Container& other, const Alloc& alloc) : c(other, alloc) {}
+        queue(const Container& other, const Alloc& alloc) : c(other, alloc) {}
         template<class Alloc>
-        stack(Container&& other, const Alloc& alloc) : c(microc::traits::move(other), alloc) {}
+        queue(Container&& other, const Alloc& alloc) : c(microc::traits::move(other), alloc) {}
         template<class Alloc>
-        stack(const stack& other, const Alloc& alloc) : stack(other.c, alloc) {};
+        queue(const queue& other, const Alloc& alloc) : queue(other.c, alloc) {};
         template<class Alloc>
-        stack(stack&& other, const Alloc& alloc) : stack(microc::traits::move(other.c), alloc) {};
+        queue(queue&& other, const Alloc& alloc) : queue(microc::traits::move(other.c), alloc) {};
         template<class InputIt, class Alloc>
-        stack(InputIt first, InputIt last, const Alloc& alloc) : c(first, last, alloc) {};
+        queue(InputIt first, InputIt last, const Alloc& alloc) : c(first, last, alloc) {};
 
         // assignment
-        stack& operator=(const stack& other) { c=other.c; return *this; }
-        stack& operator=(stack && other) noexcept { c=microc::traits::move(other.c); return *this; }
+        queue& operator=(const queue& other) { c=other.c; return *this; }
+        queue& operator=(queue && other) noexcept { c=microc::traits::move(other.c); return *this; }
 
         // Element access
-        reference top() { return c.back(); }
-        const_reference top() const { return c.back(); }
+        reference front() { return c.front(); }
+        const_reference front() const { return c.front(); }
+        reference back() { return c.back(); }
+        const_reference back() const { return c.back(); }
 
         // Capacity
         bool empty() const { return c.empty(); }
@@ -81,7 +81,7 @@ namespace microc {
         void push(value_type && value) { c.push_back(microc::traits::move(value)); }
         template<class... Args>
         void emplace(Args&&... args) { c.emplace_back(std::forward<Args>(args)...); }
-        void pop() { c.pop_back(); }
+        void pop() { c.pop_front(); }
 
         // meta
         container_type & get_container() { return c; }

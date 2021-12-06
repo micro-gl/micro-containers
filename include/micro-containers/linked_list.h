@@ -195,8 +195,8 @@ namespace microc {
                 linked_list(allocator) {
             const bool are_equal_allocators = allocator==other.get_allocator();
             if(are_equal_allocators) {
-                _sentinel_node.next = other._sentinel_node.next;
-                _sentinel_node.prev = other._sentinel_node.prev;
+                _sentinel_node.next = other.size() ? other._sentinel_node.next : &_sentinel_node;
+                _sentinel_node.prev = other.size() ? other._sentinel_node.prev : &_sentinel_node;
                 _sentinel_node.next->prev = &_sentinel_node;
                 _sentinel_node.prev->next = &_sentinel_node;
                 _size = other._size;
@@ -233,8 +233,8 @@ namespace microc {
             if(are_equal_allocators) {
                 // clear and destruct current elements
                 // move everything from other
-                _sentinel_node.next = other._sentinel_node.next;
-                _sentinel_node.prev = other._sentinel_node.prev;
+                _sentinel_node.next = other.size() ? other._sentinel_node.next : &_sentinel_node;
+                _sentinel_node.prev = other.size() ? other._sentinel_node.prev : &_sentinel_node;
                 _sentinel_node.next->prev = &_sentinel_node;
                 _sentinel_node.prev->next = &_sentinel_node;
                 _size = other._size;

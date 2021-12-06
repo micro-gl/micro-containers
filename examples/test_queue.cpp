@@ -1,11 +1,11 @@
 #include "src/test_utils.h"
-#include <micro-containers/stack.h>
-#include <micro-containers/static_array.h>
+#include <micro-containers/queue.h>
+#include <micro-containers/linked_list.h>
 
 void test_1() {
     print_test_header("test_1");
 
-    using stack_t = stack<int, static_array<int, 100>>;
+    using stack_t = queue<int, linked_list<int>>;
 
     stack_t s;
 

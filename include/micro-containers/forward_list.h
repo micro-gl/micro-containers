@@ -198,7 +198,8 @@ namespace microc {
                 forward_list(allocator) {
             const bool are_equal_allocators = allocator==other.get_allocator();
             if(are_equal_allocators) {
-                other.find_last_node()->next = &_sentinel_node;
+                auto * last_node = other.find_last_node();
+                if(last_node) last_node->next = &_sentinel_node;
                 _sentinel_node.next = other._sentinel_node.next;
                 _size = other._size;
                 other.reset_sentinel();
@@ -234,7 +235,8 @@ namespace microc {
             if(self_assign) return *this;
             clear();
             if(are_equal_allocators) {
-                other.find_last_node()->next = &_sentinel_node;
+                auto * last_node = other.find_last_node();
+                if(last_node) last_node->next = &_sentinel_node;
                 _sentinel_node.next = other._sentinel_node.next;
                 _size = other._size;
                 other.reset_sentinel();
