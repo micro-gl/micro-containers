@@ -36,10 +36,16 @@ namespace microc {
      * Notes:
      * - Most algorithms use recursion, so there is a stack memory cost of O(log(n))
      * - This class is Allocator-Aware
+     * - We give user an option to break down and define what is a key, as usually the stored item is the key itself,
+     *   BUT, many data structure only use a key which is a partial data of the stored item such as pairs of (key, value).
+     *   In this case, query/find/erase induce a cost of temporarily creating the value in the pair which is undesirable,
+     *   therefore, I give an option to use keys of different types then stored item, as long as they can be computed, or
+     *   referenced from the stored type as well.
+     *   KeyExtractFunction type is a function struct, that given a stored type, can compute a reference to a comparable key
      * @tparam StoreItemType The item type, that the tree stores
-     * @tparam Key The key type, that is used to identify StoreItemType, usually a sub-type of StoreItemType
-     * @tparam Compare compare structure or lambda
-     * @tparam KeyExtractFunction (Optional) Extract a key from the stored item object
+     * @tparam Key The key type, that is used to compare StoreItemType, usually a sub-type of StoreItemType or StoreItemType itself
+     * @tparam Compare compare structure to compare keys less than binary relation (key_1 < key_2)
+     * @tparam KeyExtractFunction (Optional) Extract a key from the stored item object, by default the StoreItemType is the key
      * @tparam Allocator allocator type
      */
     template<class StoreItemType,

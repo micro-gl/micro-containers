@@ -24,6 +24,7 @@ set(SOURCES
         test_hash_set.cpp
         test_array.cpp
         test_static_array.cpp
+        test_stack.cpp
         )
 
 set(SOURCES_SHARED "" src/test_utils.h)
