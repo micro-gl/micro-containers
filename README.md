@@ -27,6 +27,7 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 #### Adaptors Containers
 - stack
 - queue
+- priority_queue
 
 #### Algorithms
 - make_heap, is_heap, push_heap, pop_heap, sort_heap
