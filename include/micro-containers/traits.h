@@ -21,6 +21,8 @@ template<> struct micro_hash<signed> {
 };
 
 namespace microc {
+    using size_t = MICRO_CONTAINERS_SIZE_TYPE;
+
     namespace traits {
 
         template< class T > struct remove_reference      {typedef T type;};
@@ -28,6 +30,21 @@ namespace microc {
         template< class T > struct remove_reference<T&&> {typedef T type;};
         template <class T>
         using remove_reference_t = typename remove_reference<T>::type;
+
+        template< class T > struct remove_const_and_reference      {typedef T type;};
+        template< class T > struct remove_const_and_reference<const T>  {typedef T type;};
+        template< class T > struct remove_const_and_reference<const T&>  {typedef T type;};
+        template< class T > struct remove_const_and_reference<T&&> {typedef T type;};
+        template <class T>
+        using remove_const_and_reference_t = typename remove_reference<T>::type;
+
+        template< class T > struct remove_const      {typedef T type;};
+        template< class T > struct remove_const<const T>  {typedef T type;};
+        template< class T > struct remove_const<const T&>  {typedef T & type;};
+        template< class T > struct remove_const<T&&> {typedef T&& type;};
+        template <class T>
+        using remove_const_t = typename remove_reference<T>::type;
+
 
         template <class _Tp> inline typename remove_reference<_Tp>::type&&
         move(_Tp&& __t) noexcept {
