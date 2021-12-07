@@ -83,7 +83,7 @@ namespace microc {
     }
 
     template<class RandomIt, class Compare>
-    void push_heap(RandomIt first, RandomIt last, Compare comp) {
+    void push_heap(RandomIt first, RandomIt last, Compare c) {
         if(first==last) return;
         auto size = last-first;
         auto i = size-1;
@@ -98,22 +98,23 @@ namespace microc {
 
     template<class RandomIt>
     void push_heap(RandomIt first, RandomIt last) {
-        // insert item at position last-1 into the heap, we need to correct heap. We assume
-        // [first, last-1) is a heap and we want to make [first, last-1] a heap.
+        // item was inserted at position last-1 into the heap, we need to correct heap. We assume
+        // [first, last-1) is a heap and we want to make [first, last) a heap.
         using Compare=microc::less<traits::remove_const_and_reference_t<decltype(*first)>>;
         microc::push_heap<RandomIt, Compare>(first, last, Compare());
     }
 
     template<class RandomIt, class Compare>
     void pop_heap(RandomIt first, RandomIt last, Compare comp) {
-        // Assumes [first, last) is already a heap, then make subrange [first, last-1) into a heap.
+        // pop the root element into the last position and correct sub heap.
+        // Assumes [first, last) is already a heap, then make sub-range [first, last-1) into a heap.
         // Swaps the value in the position first and the value in the position last-1 and make it a heap.
         if(first==last) return;
         auto size = last-first;
         const auto temp = first[0];
         first[0] = first[size-1];
         first[size-1] = temp;
-        __heapify<RandomIt, Compare>(first, last-1, comp);
+        __heapify<RandomIt, Compare>(first, last-1, 0, comp);
     }
 
     template<class RandomIt>
@@ -143,7 +144,6 @@ namespace microc {
     template<class RandomIt, class Compare>
     void sort_heap(RandomIt first, RandomIt last, Compare comp) {
         if(first==last) return;
-        make_heap(first, last);
         auto size = last-first;
         using size_t =  decltype(size);
         // unsigned count down to 1 included
@@ -151,7 +151,7 @@ namespace microc {
             const auto temp = first[ix];
             first[ix] = first[0];
             first[0] = temp;
-            __heapify<RandomIt, Compare>(first, last, 0, comp);
+            __heapify<RandomIt, Compare>(first, --last, 0, comp);
         }
     }
 
@@ -160,8 +160,4 @@ namespace microc {
         using Compare=microc::less<traits::remove_const_and_reference_t<decltype(*first)>>;
         microc::sort_heap<RandomIt, Compare>(first, last, Compare());
     }
-
-
-
-
 }

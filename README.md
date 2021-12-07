@@ -28,6 +28,8 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 - stack
 - queue
 
+#### Algorithms
+- make_heap, is_heap, push_heap, pop_heap, sort_heap
 
 
 ## Installing `micro{containers}`
