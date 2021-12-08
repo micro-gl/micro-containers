@@ -103,6 +103,13 @@ namespace microc {
         template <typename T>
         struct is_allocator_aware <T, typename conditional<false, typename T::allocator_type, int>::type> :
                 microc::traits::true_type { };
+
+        template<class __T>
+        struct is_integral { constexpr static bool value = false; };
+        template<> struct is_integral<unsigned> { constexpr static bool value = true; };
+        template<> struct is_integral<signed> { constexpr static bool value = true; };
+        template<> struct is_integral<char> { constexpr static bool value = true; };
+
 // another version with decltype
 //        template <typename T>
 //        struct is_allocator_aware <T, decltype((void) T().get_allocator(), 0)> : microc::traits::true_type { };

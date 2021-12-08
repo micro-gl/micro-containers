@@ -27,7 +27,7 @@ namespace microc {
      * @tparam Compare A strict compare function interface
      */
     template<class T,
-            class Container = std::vector<T>,
+            class Container,
             class Compare = microc::less<typename Container::value_type>>
     class priority_queue {
     public:
@@ -40,7 +40,7 @@ namespace microc {
 
     protected:
         container_type c;
-        container_type comp;
+        value_compare comp;
 
     public:
         // ctors

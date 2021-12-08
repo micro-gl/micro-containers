@@ -24,6 +24,7 @@ set(SOURCES
         test_hash_set.cpp
         test_array.cpp
         test_static_array.cpp
+        test_dynamic_array.cpp
         test_stack.cpp
         test_queue.cpp
         test_heap.cpp
