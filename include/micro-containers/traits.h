@@ -146,24 +146,17 @@ namespace microc {
         template<class U>
         explicit std_allocator(const std_allocator<U> & other) noexcept { };
         explicit std_allocator()=default;
-
-        template <class U, class... Args>
-        void construct(U* p, Args&&... args) {
-            ::new(p, microc_new::blah) U(traits::forward<Args>(args)...);
-        }
+        template <class U, class... Args> void construct(U* p, Args&&... args)
+        { ::new(p, microc_new::blah) U(traits::forward<Args>(args)...); }
         T * allocate(size_t n) { return (T *)operator new(n * sizeof(T)); }
         void deallocate(T * p, size_t n=0) { operator delete (p); }
-
-        template<class U> struct rebind {
-            typedef std_allocator<U> other;
-        };
+        template<class U> struct rebind { typedef std_allocator<U> other; };
     };
 
     template<class T1, class T2>
     bool operator==(const std_allocator<T1>& lhs, const std_allocator<T2>& rhs ) noexcept {
         return true;
     }
-
 }
 
 #include "pair.h"
