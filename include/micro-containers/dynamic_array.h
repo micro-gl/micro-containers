@@ -80,7 +80,6 @@ namespace microc {
      */
     template<typename T, class Alloc=dynamic_array_traits::std_allocator<T>>
     class dynamic_array {
-        using const_dynamic_array_ref = const dynamic_array<T, Alloc> &;
     public:
         using value_type = T;
         using size_type = microc::size_t;
@@ -108,7 +107,7 @@ namespace microc {
         size_type _cap;
 
     public:
-        explicit dynamic_array(const Alloc & alloc = Alloc()) noexcept :
+        explicit dynamic_array(const Alloc & alloc) noexcept :
             _data(nullptr), _current(0), _cap(0), _alloc(alloc) {}
         dynamic_array() noexcept : dynamic_array(Alloc()) {}
         dynamic_array(const size_type count, const T & value, const Alloc & alloc = Alloc()) :
@@ -332,7 +331,7 @@ namespace microc {
             }
 
             auto current_end = end();
-            const auto current_size = size();
+            const size_type current_size = size();
             auto new_end = current_end + needed_extra_size;
             //
 #define minnnn(a,b) ((a)<(b) ? (a) : (b))
@@ -395,6 +394,19 @@ namespace microc {
             return const_cast<iterator>(last_pos-count);
         }
 
+        iterator erase(const_iterator pos) { return erase(pos, pos+1); }
+        iterator erase(const_iterator first, const_iterator last) {
+            auto count_to_erase = last-first;
+            auto move_to_iter = const_cast<iterator>(first);
+            while (last!=end()) {
+                *(move_to_iter) = microc::traits::move(*last);
+                ++last; ++move_to_iter;
+            }
+            while(last!=end()) { last->~T(); ++last; }
+            _current-=count_to_erase;
+            return const_cast<iterator>(first);
+        }
+
         // Iterators
         const_iterator begin() const noexcept {return _data;}
         const_iterator end() const noexcept {return _data + size();}
@@ -408,12 +420,10 @@ namespace microc {
     template<class T, class Alloc>
     bool operator==(const dynamic_array<T,Alloc>& lhs,
                     const dynamic_array<T,Alloc>& rhs ) {
-        const bool equals_sizes = lhs.size()==rhs.size();
-        if(!equals_sizes) return false;
+        if(!(lhs.size()==rhs.size())) return false;
         using size_type = typename dynamic_array<T,Alloc>::size_type;
         for (size_type ix = 0; ix < lhs.size(); ++ix) {
-            if(!(lhs[ix]==rhs[ix]))
-                return false;
+            if(!(lhs[ix]==rhs[ix])) return false;
         }
         return true;
     }

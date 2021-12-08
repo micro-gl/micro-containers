@@ -31,6 +31,41 @@ void test_insert() {
     print_simple_container(vec);
 }
 
+void test_erase() {
+    print_test_header("test_erase");
+
+    using container = dynamic_array<int>;
+
+    int aa[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    container c;
+    for (int ix = 0; ix < 10; ++ix) c.push_back(ix);
+
+    print_simple_container(c);
+
+    c.erase(c.begin());
+    print_simple_container(c);
+
+    c.erase(c.begin()+2, c.begin()+5);
+    print_simple_container(c);
+
+    // Erase all even numbers (C++11 and later)
+    for (auto it = c.begin(); it != c.end(); ) {
+        if (*it % 2 == 0) {
+            it = c.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    print_simple_container(c);
+
+    c.erase(c.end()-1);
+    print_simple_container(c);
+
+    c.erase(c.begin(), c.end());
+    print_simple_container(c);
+
+}
+
 void test_emplace() {
     print_test_header("test_emplace");
 
@@ -39,7 +74,8 @@ void test_emplace() {
 
 int main() {
     // modifiers
-    test_insert();
+//    test_insert();
+    test_erase();
 //    test_emplace();
 }
 

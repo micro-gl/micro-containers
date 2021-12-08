@@ -1,7 +1,6 @@
 - span
 - 
 - add other stuff from the stdlib to static array
-- add erase by iterator to dynamic array
 - add insert/erase by iterator to dynamic array and static array
 - 
 - decide weather every class is stand alone or uses traits.h
