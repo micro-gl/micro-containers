@@ -10,18 +10,7 @@
 ========================================================================================*/
 #pragma once
 
-#include "new_micro.h"
-
-template<class Key> struct micro_hash{};
-template<> struct micro_hash<unsigned> {
-    MICRO_CONTAINERS_SIZE_TYPE operator()(unsigned const s) const noexcept { return s; }
-};
-template<> struct micro_hash<signed> {
-    MICRO_CONTAINERS_SIZE_TYPE operator()(signed const s) const noexcept { return s & ~(1<<((sizeof(s)<<3)-1)) ; }
-};
-
 namespace microc {
-    using size_t = MICRO_CONTAINERS_SIZE_TYPE;
 
     namespace traits {
 
@@ -104,47 +93,77 @@ namespace microc {
         struct is_allocator_aware <T, typename conditional<false, typename T::allocator_type, int>::type> :
                 microc::traits::true_type { };
 
-        template<class __T>
+        // another version with decltype
+//        template <typename T>
+//        struct is_allocator_aware <T, decltype((void) T().get_allocator(), 0)> : microc::traits::true_type { };
+
+        template<class T>
         struct is_integral { constexpr static bool value = false; };
         template<> struct is_integral<unsigned> { constexpr static bool value = true; };
         template<> struct is_integral<signed> { constexpr static bool value = true; };
         template<> struct is_integral<char> { constexpr static bool value = true; };
-
-// another version with decltype
-//        template <typename T>
-//        struct is_allocator_aware <T, decltype((void) T().get_allocator(), 0)> : microc::traits::true_type { };
-
-        /**
-         * standard allocator
-         * @tparam T the allocated object type
-         */
-        template<typename T>
-        class std_allocator {
-        public:
-            using value_type = T;
-            using size_t = unsigned long;
-        public:
-            template<class U>
-            explicit std_allocator(const std_allocator<U> & other) noexcept { };
-            explicit std_allocator()=default;
-
-            template <class U, class... Args>
-            void construct(U* p, Args&&... args) {
-                ::new(p, microc_new::blah) U(traits::forward<Args>(args)...);
-            }
-            T * allocate(size_t n) { return (T *)operator new(n * sizeof(T)); }
-            void deallocate(T * p, size_t n=0) { operator delete (p); }
-
-            template<class U> struct rebind {
-                typedef std_allocator<U> other;
-            };
-        };
-
-        template<class T1, class T2>
-        bool operator==(const std_allocator<T1>& lhs, const std_allocator<T2>& rhs ) noexcept {
-            return true;
-        }
     }
+}
+
+namespace microc {
+
+    using uintptr_type = typename traits::conditional<
+            sizeof(void *) == sizeof(unsigned short), unsigned short,
+            typename traits::conditional<
+                    sizeof(void *) == sizeof(unsigned int), unsigned int,
+                    typename traits::conditional<
+                            sizeof(void *) ==
+                            sizeof(unsigned long), unsigned long, unsigned long long>::type>::type>::type;
+
+    using size_t = uintptr_type;
+}
+
+enum class microc_new { blah };
+// This is a placement new override
+inline void* operator new (microc::size_t n, void* ptr, enum microc_new) noexcept {
+    return ptr;
+}
+
+namespace microc {
+    template<class Key> struct micro_hash{};
+    template<> struct micro_hash<unsigned> {
+        microc::size_t operator()(unsigned const s) const noexcept { return s; }
+    };
+    template<> struct micro_hash<signed> {
+        microc::size_t operator()(signed const s) const noexcept { return s & ~(1<<((sizeof(s)<<3)-1)) ; }
+    };
+
+    /**
+    * standard allocator
+    * @tparam T the allocated object type
+    */
+    template<typename T>
+    class std_allocator {
+    public:
+        using value_type = T;
+        using size_t = microc::size_t;
+    public:
+        template<class U>
+        explicit std_allocator(const std_allocator<U> & other) noexcept { };
+        explicit std_allocator()=default;
+
+        template <class U, class... Args>
+        void construct(U* p, Args&&... args) {
+            ::new(p, microc_new::blah) U(traits::forward<Args>(args)...);
+        }
+        T * allocate(size_t n) { return (T *)operator new(n * sizeof(T)); }
+        void deallocate(T * p, size_t n=0) { operator delete (p); }
+
+        template<class U> struct rebind {
+            typedef std_allocator<U> other;
+        };
+    };
+
+    template<class T1, class T2>
+    bool operator==(const std_allocator<T1>& lhs, const std_allocator<T2>& rhs ) noexcept {
+        return true;
+    }
+
 }
 
 #include "pair.h"

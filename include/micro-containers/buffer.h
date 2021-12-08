@@ -40,7 +40,7 @@ namespace microc {
 
         rebind_alloc _allocator;
         element_type *_data = nullptr;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
         bool owner = false;
         size_type _size = 0;
 

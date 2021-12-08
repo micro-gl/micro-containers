@@ -14,7 +14,7 @@ void test_insert() {
     it = vec.insert(it, 200);
     print_simple_container(vec);
 
-    vec.insert(it,2,300);
+    vec.insert(it, 2, 300);
     std::cout << "**\n";
     print_simple_container(vec);
     std::cout << "**\n";
@@ -22,7 +22,7 @@ void test_insert() {
     // "it" no longer valid, get a new one:
     it = vec.begin();
 
-    c vec2(2,400);
+    c vec2(2, 400);
     vec.insert(it+2, vec2.begin(), vec2.end());
     print_simple_container(vec);
 

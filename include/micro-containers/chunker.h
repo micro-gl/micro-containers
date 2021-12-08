@@ -66,7 +66,7 @@ namespace microc {
     class allocator_aware_chunker {
     public:
         using value_type = T;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
 
         using allocator_type = Allocator;
         using allocator_type_data = typename allocator_type::template rebind<value_type>::other;
@@ -185,7 +185,7 @@ namespace microc {
     class non_allocator_aware_chunker {
     public:
         using value_type = T;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
 
         using container_data_type = container_template_type<value_type>;
         using container_index_type = container_template_type<size_type>;

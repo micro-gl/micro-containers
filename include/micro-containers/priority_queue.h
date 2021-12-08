@@ -10,7 +10,6 @@
 ========================================================================================*/
 #pragma once
 
-#include "traits.h"
 #include "algorithm.h"
 
 namespace microc {

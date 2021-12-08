@@ -1,8 +1,9 @@
 - span
 - 
-- use size_t like I did in micro-alloc
-- add other stuff from the stdlib to dynamic/static array
+- add other stuff from the stdlib to static array
+- add erase by iterator to dynamic array
 - add insert/erase by iterator to dynamic array and static array
+- 
 - decide weather every class is stand alone or uses traits.h
 - design some algorithms like for_each, range, etc...
 - add == operator outside for each container

@@ -34,7 +34,7 @@ namespace microc {
  * @tparam T item type
  * @tparam N size of array
  */
-    template <class T, MICRO_CONTAINERS_SIZE_TYPE N>
+    template <class T, microc::size_t N>
     struct array
     {
         using value_type = T;
@@ -44,7 +44,7 @@ namespace microc {
         using const_iterator = const value_type *;
         using pointer = value_type *;
         using const_pointer = const value_type *;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
 
         T _data[N];
 

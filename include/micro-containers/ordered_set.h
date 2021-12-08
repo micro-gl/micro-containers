@@ -35,12 +35,12 @@ namespace microc {
      */
     template<class Key,
              class Compare=ordered_set_less<Key>,
-             class Allocator=microc::traits::std_allocator<char>>
+             class Allocator=microc::std_allocator<char>>
     class ordered_set {
     public:
         using key_type = Key;
         using value_type = Key;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
         using key_compare = Compare;
         using value_compare = Compare;
         using allocator_type = Allocator;

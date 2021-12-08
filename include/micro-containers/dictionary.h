@@ -36,14 +36,14 @@ namespace microc {
      */
     template<class Key, class T,
              class Compare=dict_less<Key>,
-             class Allocator=microc::traits::std_allocator<char>>
+             class Allocator=microc::std_allocator<char>>
     class dictionary {
     public:
         using key_type = Key;
         using mapped_type = T;
         using value_type = pair<Key, T>;
         using key_compare = Compare;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
         using allocator_type = Allocator;
         using reference = value_type &;
         using const_reference = const value_type &;

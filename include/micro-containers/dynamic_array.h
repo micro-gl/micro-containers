@@ -83,7 +83,7 @@ namespace microc {
         using const_dynamic_array_ref = const dynamic_array<T, Alloc> &;
     public:
         using value_type = T;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
         using allocator_type = Alloc;
         using reference = value_type &;
         using const_reference = const value_type &;
@@ -91,58 +91,58 @@ namespace microc {
         using const_pointer = const value_type *;
         using iterator = pointer;
         using const_iterator = const_pointer;
+        struct out_of_bounds_exception {};
 
     private:
         using rebind_allocator_type = typename Alloc::template rebind<value_type>::other;
 
-        T *_data = nullptr;
+        void throw_out_of_bounds_exception_if_can() {
+#ifdef MICRO_CONTAINERS_ENABLE_THROW
+            throw out_of_bounds_exception();
+#endif
+        }
+
+        T *_data;
         rebind_allocator_type _alloc;
-        size_type _current = 0u;
-        size_type _cap = 0u;
+        size_type _current;
+        size_type _cap;
 
     public:
-        explicit dynamic_array(const Alloc & alloc = Alloc()) noexcept : _alloc{alloc} {}
+        explicit dynamic_array(const Alloc & alloc = Alloc()) noexcept :
+            _data(nullptr), _current(0), _cap(0), _alloc(alloc) {}
         dynamic_array() noexcept : dynamic_array(Alloc()) {}
-
         dynamic_array(const size_type count, const T & value, const Alloc & alloc = Alloc()) :
                 dynamic_array(alloc) {
             reserve(count);
             for (size_type ix = 0; ix < count; ++ix) push_back(value);
         }
-
         explicit dynamic_array(size_type count, const Alloc& alloc = Alloc()) :
                             dynamic_array(count, T(), alloc) {}
-
         template<class Iterable>
         explicit dynamic_array(const Iterable &list, const Alloc & alloc= Alloc()) :
                 dynamic_array(alloc) {
             reserve(list.size());
             for (const auto & item : list) push_back(item);
         }
-
         template<class InputIt, typename bb = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
         dynamic_array(InputIt first, InputIt last, const Alloc & alloc= Alloc()) :
                 dynamic_array(alloc) {
             reserve(last-first);
             while(first!=last) { push_back(*first); ++first; }
         }
-
         dynamic_array(const dynamic_array & other, const Alloc & alloc) noexcept :
                 dynamic_array(alloc) {
             reserve(other.size());
             for (const auto & item : other) push_back(item);
         }
-
         dynamic_array(const dynamic_array & other) noexcept :
                 dynamic_array(other, other.get_allocator()) {
         }
-
         dynamic_array(dynamic_array && other, const Alloc & alloc) noexcept :
                 dynamic_array(alloc) {
             reserve(other.size());
             for (auto & item : other) push_back(dynamic_array_traits::move(item));
         }
-
         dynamic_array(dynamic_array && other) noexcept : dynamic_array{other.get_allocator()} {
             _data = other._data;
             _current = other._current;
@@ -151,24 +151,18 @@ namespace microc {
             other._cap=0;
             other._current=0;
         }
-
         ~dynamic_array() noexcept { drain(); }
 
-        struct out_of_bounds_exception {};
         // Element access
         reference operator[](size_type i) { return _data[i]; }
         const_reference operator[](size_type i) const { return _data[i]; }
         reference at(size_type pos) {
             if(pos>=0 && pos < size()) return _data[pos];
-#ifdef MICRO_CONTAINERS_ENABLE_THROW
-            throw out_of_bounds_exception();
-#endif
+            throw_out_of_bounds_exception_if_can();
         }
         const_reference at(size_type pos) const {
             if(pos>=0 && pos < size()) return _data[pos];
-#ifdef MICRO_CONTAINERS_ENABLE_THROW
-            throw out_of_bounds_exception();
-#endif
+            throw_out_of_bounds_exception_if_can();
         }
         T* data() noexcept { return _data; }
         const T* data() const noexcept { return _data; }
@@ -181,7 +175,6 @@ namespace microc {
         bool empty() noexcept { return _current==0; }
         size_type size() const noexcept { return _current; }
         size_type capacity() const noexcept { return _cap; }
-
         void reserve(size_type new_cap) {
             bool avoid = new_cap <= capacity();
             if(avoid) return;
@@ -211,12 +204,10 @@ namespace microc {
             // 1. if the allocators are equal, then move the data completely.
             // 2. otherwise, move element by element
             const bool are_equal = _alloc == other.get_allocator();
-            const bool self_assign = this == &other;
-            if(self_assign) return *this;
-
+            if(this==&other) return *this;
+            clear();
             if(are_equal) {
                 // clear and destruct current elements
-                clear();
                 // deallocate the current memory
                 _alloc.deallocate(_data, capacity());
                 // move everything from other
@@ -229,7 +220,6 @@ namespace microc {
                 other._current=0;
             } else {
                 if(other.size() >= capacity()) {
-                    clear(); // clear and destruct current objects
                     _alloc.deallocate(_data, capacity()); // de allocate the chunk
                     _data = _alloc.allocate(other.size()); // create new chunk
                 }
@@ -241,7 +231,6 @@ namespace microc {
                 _cap = other._cap;
                 // different allocators, we do not de-allocate the other array.
             }
-
             return (*this);
         }
 
@@ -252,7 +241,6 @@ namespace microc {
             const auto new_cap = up ? (_cap==0?1:_cap*2) : _cap/2;
             re_alloc_to(new_cap);
         }
-
         void re_alloc_to(size_type new_capacity) noexcept {
             // re-alloc to another capacity and move old elements
             const auto old_size = _current;
@@ -295,10 +283,9 @@ namespace microc {
             if(_current < (_cap>>1)) alloc_(false);
         }
 
-        // todo: this is wrong
         template<class... Args>
         iterator emplace(const_iterator pos, Args&&... args) {
-            return ::new (pos, microc_new::blah) T(dynamic_array_traits::forward<Args>(args)...);
+            return insert(pos, T(dynamic_array_traits::forward<Args>(args)...));
         }
         template<typename... Args>
         reference emplace_back(Args&&... args) {
@@ -321,11 +308,14 @@ namespace microc {
             _current = 0;
         }
 
-#define max___(a,b) ((a)<(b) ? (b) : (a))
-#define min___(a,b) ((a)<(b) ? (a) : (b))
-
+        // avoid overload resolution if InputIt is integral type, this can conflict with the
+        // insert(const_iterator pos, size_type count, const T& value) overload for integral types
         template<class InputIt, typename bb = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
-        iterator insert(const_iterator pos, InputIt first, InputIt last) {
+        iterator insert(const_iterator pos, InputIt first, InputIt last, bool move=false) {
+            if(pos>end() or pos<begin()) {
+                throw_out_of_bounds_exception_if_can();
+                return end();
+            }
             if(first==last) return const_cast<iterator>(pos);
             // insert range before pos
             const auto dist_to_first = pos-begin();
@@ -345,29 +335,30 @@ namespace microc {
             const auto current_size = size();
             auto new_end = current_end + needed_extra_size;
             //
+#define minnnn(a,b) ((a)<(b) ? (a) : (b))
             const auto how_many_veterans_require_move_construction =
-                    min___(how_many_to_shift_right, needed_extra_size);
+                    minnnn(how_many_to_shift_right, needed_extra_size);
             const auto how_many_veterans_require_move_assignment =
-//                    how_many_veterans_require_move_construction < how_many_to_shift_right ?
                     how_many_to_shift_right-how_many_veterans_require_move_construction;
-//                    : 0;
             const auto how_many_range_require_copy_construction =
                     needed_extra_size-how_many_veterans_require_move_construction;
-
+#undef minnnn
             // move-construct at end the last elements, that belong to this
             for (size_type ix = 1; ix<=how_many_veterans_require_move_construction; ++ix) { // count from [N..1]
-                ::new (--new_end, microc_new::blah)
-                        T(dynamic_array_traits::move(*(--current_end)));
+                ::new (--new_end, microc_new::blah) T(dynamic_array_traits::move(*(--current_end)));
             }
             for (size_type ix = 1; ix<=how_many_veterans_require_move_assignment; ++ix) { // count from [N..1]
                 *(--new_end) = dynamic_array_traits::move(*(--current_end));
             }
             // copy-construct some range elements
             for (size_type ix = 1; ix<=how_many_range_require_copy_construction; ++ix) { // count from [N..1]
-                ::new (--new_end, microc_new::blah) T(*(--last));
+                if(!move)
+                    ::new (--new_end, microc_new::blah) T(*(--last));
+                else
+                    ::new (--new_end, microc_new::blah) T(microc::traits::move(*(--last)));
             }
             do {
-                *(--new_end) = *(--last);
+                *(--new_end) = !move ? *(--last) : microc::traits::move(*(--last));
             } while(last!=first);
 
             _current += needed_extra_size;
@@ -375,13 +366,29 @@ namespace microc {
             return const_cast<iterator>(pos);
         }
         iterator insert(const_iterator pos, const T& value) {
+            if(pos>end() or pos<begin()) {
+                throw_out_of_bounds_exception_if_can();
+                return end();
+            }
             if(pos==end()) { push_back(value); return end(); }
             return insert<const_iterator>(pos, &value, (&value)+1);
         }
+        iterator insert(const_iterator pos, T && value) {
+            if(pos>end() or pos<begin()) {
+                throw_out_of_bounds_exception_if_can();
+                return end();
+            }
+            if(pos==end()) { push_back(microc::traits::move(value)); return end(); }
+            return insert<const_iterator>(pos, &value, (&value)+1, true);
+        }
         iterator insert(const_iterator pos, size_type count, const T& value) {
+            if(pos>end() or pos<begin()) {
+                throw_out_of_bounds_exception_if_can();
+                return end();
+            }
             // this is a very lazy batch insert, correct way it to implement a
             // range iterator that returns the same value
-            iterator last_pos = const_cast<iterator>(pos);
+            auto last_pos = const_cast<iterator>(pos);
             for (int ix = 0; ix < count; ++ix) {
                 last_pos = insert(last_pos, value);
             }

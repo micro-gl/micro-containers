@@ -82,7 +82,7 @@ namespace microc {
         using const_reference = const value_type &;
         using pointer = value_type *;
         using const_pointer = const value_type *;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
 
     private:
         struct node_base_t {

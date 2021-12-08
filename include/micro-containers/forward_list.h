@@ -88,7 +88,7 @@ namespace microc {
     class forward_list {
     public:
         using value_type = T;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
         using allocator_type = Allocator;
         using reference = value_type &;
         using const_reference = const value_type &;

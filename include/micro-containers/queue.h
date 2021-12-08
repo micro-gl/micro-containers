@@ -30,7 +30,7 @@ namespace microc {
         using container_type = Container;
         using reference = value_type &;
         using const_reference = const value_type &;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = typename container_type::size_type;
 
     protected:
         container_type c;

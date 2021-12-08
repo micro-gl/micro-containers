@@ -52,7 +52,7 @@ namespace microc {
              class Key=StoreItemType,
              class Compare=avl_less<Key>,
              class KeyExtractFunction=avl_key_extract<StoreItemType, Key>,
-             class Allocator=microc::traits::std_allocator<char>>
+             class Allocator=microc::std_allocator<char>>
     class avl_tree {
     public:
         using store_item_type = StoreItemType;
@@ -60,7 +60,7 @@ namespace microc {
         using compare_function = Compare;
         using key_extract_function = KeyExtractFunction;
         using allocator_type = Allocator;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
 
     private:
         struct node_t {

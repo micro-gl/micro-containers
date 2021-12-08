@@ -42,7 +42,7 @@ namespace microc {
         class void_allocator {
         public:
             using value_type = T;
-            using size_t = MICRO_CONTAINERS_SIZE_TYPE;
+            using size_t = microc::size_t;
             template<class U>
             explicit void_allocator(const void_allocator<U> & other) noexcept { };
             explicit void_allocator()=default;
@@ -75,7 +75,7 @@ namespace microc {
     public:
         using value_type = T;
         using allocator_type = fake_allocator;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
         using reference = value_type &;
         using const_reference = const value_type &;
         using pointer = value_type *;

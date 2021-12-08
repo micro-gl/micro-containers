@@ -29,13 +29,13 @@ namespace microc {
      */
     template<class Key, class T,
              class Hash=micro_hash<Key>,
-             class Allocator=microc::traits::std_allocator<char>>
+             class Allocator=microc::std_allocator<char>>
     class hash_map {
     public:
         using key_type = Key;
         using mapped_type = T;
         using value_type = pair<Key, T>;
-        using size_type = MICRO_CONTAINERS_SIZE_TYPE;
+        using size_type = microc::size_t;
         using hasher = Hash;
         using allocator_type = Allocator;
         using reference = value_type &;

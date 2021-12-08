@@ -30,7 +30,7 @@ namespace microc {
     inline microc::size_t __heap_before_leafs(unsigned i) { return (i-1)>>1; }
 
     template<class RandomIt, class Compare>
-    inline void __heapify(RandomIt first, RandomIt last, unsigned i, Compare c) {
+    inline void __heapify(RandomIt first, RandomIt last, microc::size_t i, Compare c) {
         if(first==last) return;
         // bubble down
         using size_t =  microc::size_t;
@@ -63,8 +63,7 @@ namespace microc {
         auto size = last-first;
         if(size<=1) return true;
         auto before_leafs = __heap_before_leafs(size);
-        using size_t =  decltype(before_leafs);
-        for (size_t ix = 0; ix <= before_leafs; ++ix) {
+        for (microc::size_t ix = 0; ix <= before_leafs; ++ix) {
             // p>=l , p>=r
             const bool has_left_child = __heap_left_child_of(ix)<size;
             const bool has_right_child = __heap_right_child_of(ix)<size;
@@ -100,7 +99,7 @@ namespace microc {
     void push_heap(RandomIt first, RandomIt last) {
         // item was inserted at position last-1 into the heap, we need to correct heap. We assume
         // [first, last-1) is a heap and we want to make [first, last) a heap.
-        using Compare=microc::less<traits::remove_const_and_reference_t<decltype(*first)>>;
+        using Compare=microc::less<microc::traits::remove_const_and_reference_t<decltype(*first)>>;
         microc::push_heap<RandomIt, Compare>(first, last, Compare());
     }
 
@@ -119,7 +118,7 @@ namespace microc {
 
     template<class RandomIt>
     void pop_heap(RandomIt first, RandomIt last) {
-        using Compare=microc::less<traits::remove_const_and_reference_t<decltype(*first)>>;
+        using Compare=microc::less<microc::traits::remove_const_and_reference_t<decltype(*first)>>;
         microc::pop_heap<RandomIt, Compare>(first, last, Compare());
     }
 
@@ -128,9 +127,8 @@ namespace microc {
         if(first==last) return;
         auto size = last-first;
         auto before_leafs = __heap_before_leafs(size);
-        using size_t =  decltype(before_leafs);
         // unsigned count down to 0 included (with a trick)
-        for (size_t ix = before_leafs; ix<=before_leafs; --ix) {
+        for (microc::size_t ix = before_leafs; ix<=before_leafs; --ix) {
             __heapify<RandomIt, Compare>(first, last, ix, comp);
         }
     }
@@ -145,9 +143,8 @@ namespace microc {
     void sort_heap(RandomIt first, RandomIt last, Compare comp) {
         if(first==last) return;
         auto size = last-first;
-        using size_t =  decltype(size);
         // unsigned count down to 1 included
-        for (size_t ix = size-1; ix!=0 ; --ix) {
+        for (microc::size_t ix = size-1; ix!=0 ; --ix) {
             const auto temp = first[ix];
             first[ix] = first[0];
             first[0] = temp;
@@ -157,7 +154,7 @@ namespace microc {
 
     template<class RandomIt>
     void sort_heap(RandomIt first, RandomIt last) {
-        using Compare=microc::less<traits::remove_const_and_reference_t<decltype(*first)>>;
+        using Compare=microc::less<microc::traits::remove_const_and_reference_t<decltype(*first)>>;
         microc::sort_heap<RandomIt, Compare>(first, last, Compare());
     }
 }
