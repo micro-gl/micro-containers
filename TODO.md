@@ -1,4 +1,5 @@
 - span
+- initializer_list constructed from array
 - 
 - add other stuff from the stdlib to static array
 - add insert/erase by iterator to dynamic array and static array

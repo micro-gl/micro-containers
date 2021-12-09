@@ -175,15 +175,14 @@ namespace microc {
         size_type size() const noexcept { return _current; }
         size_type capacity() const noexcept { return _cap; }
         void reserve(size_type new_cap) {
-            bool avoid = new_cap <= capacity();
-            if(avoid) return;
+            if(new_cap <= capacity()) return;
             T * _new_data = _alloc.allocate(new_cap);
             // move-construct old objects
             for (size_type ix = 0; ix < size(); ++ix)
                 ::new (_new_data + ix, microc_new::blah) T(dynamic_array_traits::move(_data[ix]));
             _cap = new_cap;
             // no need to destruct because the items were moved
-            if(_data!=nullptr) _alloc.deallocate(_data);
+            if(_data) _alloc.deallocate(_data);
             _data = _new_data;
         }
 
@@ -256,26 +255,33 @@ namespace microc {
             _data = _new_data;
             _cap = new_capacity;
         }
+        template<class TT>
+        void internal_push_back(TT && v) noexcept {
+            if(_current >= _cap) {
+                // copy the value, edge case if v belongs
+                // to the dynamic array
+                T vv = microc::traits::forward<TT>(v); // copy-or-move ctor
+                alloc_(true);
+                ::new(_data + _current++, microc_new::blah) T(microc::traits::move<TT>(vv));
+            } else ::new(_data + _current++, microc_new::blah) T(microc::traits::forward<TT>(v));;
+        }
+        template<class TT>
+        void internal_resize(size_type count, TT && perfect_forwarded_value) {
+            const size_type curr_size = size();
+            if(count==curr_size) return;
+            if(count < curr_size) { // reduce size
+                const auto delta = curr_size-count;
+                for (int ix = 0; ix < delta; ++ix) pop_back();
+            } else { // increase capacity and fill extra items
+                const auto delta = count-curr_size;
+                reserve(curr_size+delta);
+                for (int ix = 0; ix < delta; ++ix) push_back(microc::traits::forward<TT>(perfect_forwarded_value));
+            }
+        }
 
     public:
-        void push_back(const T & v) noexcept {
-            if(_current + 1 > _cap) {
-                // copy the value, edge case if v belongs
-                // to the dynamic array
-                const T vv = v;
-                alloc_(true);
-                ::new(_data + _current++, microc_new::blah) T(vv);
-            } else ::new(_data + _current++, microc_new::blah) T(v);;
-        }
-        void push_back(T && v) noexcept {
-            if(_current + 1 > _cap) {
-                // copy the value, edge case if v belongs
-                // to the dynamic array
-                T vv = dynamic_array_traits::move(v);
-                alloc_(true);
-                ::new(_data + _current++, microc_new::blah) T(dynamic_array_traits::move(vv));
-            } else ::new(_data + _current++, microc_new::blah) T(dynamic_array_traits::move(v));
-        }
+        void push_back(const T & v) noexcept { internal_push_back(v); }
+        void push_back(T && v) noexcept { internal_push_back(v); }
         void pop_back() {
             if(_current==0) return;
             _data[_current--].~T();
@@ -294,17 +300,14 @@ namespace microc {
         }
 
         void clear() noexcept {
-            for (size_type ix = 0; ix < capacity(); ++ix) _data[ix].~T();
+            for (size_type ix = 0; ix < size(); ++ix) _data[ix].~T();
             _current = 0;
         }
 
         void drain() noexcept {
             clear();
-            if(_data!=nullptr)
-                _alloc.deallocate(_data, capacity());
-            _data = nullptr;
-            _cap = 0;
-            _current = 0;
+            if(_data) _alloc.deallocate(_data, capacity());
+            _data = nullptr; _cap = _current = 0;
         }
 
         // avoid overload resolution if InputIt is integral type, this can conflict with the
@@ -406,6 +409,9 @@ namespace microc {
             _current-=count_to_erase;
             return const_cast<iterator>(first);
         }
+
+        void resize(size_type count) { internal_resize(count, T()); }
+        void resize(size_type count, const value_type& value) { internal_resize(count, value); }
 
         // Iterators
         const_iterator begin() const noexcept {return _data;}
