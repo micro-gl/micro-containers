@@ -21,7 +21,7 @@ namespace microc {
      * The container must satisfy the requirements of SequenceContainer. Additionally, it must
      * provide the following functions with the usual semantics:
      * - back(), front(), push_back(), pop_front()
-     * The standard containers deque and linked_list satisfy these requirements.
+     * The standard containers deque, linked_list and circular_array satisfy these requirements.
      */
     template <class T, class Container>
     class queue {

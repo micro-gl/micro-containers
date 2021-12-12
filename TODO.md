@@ -1,6 +1,6 @@
 - span
 - initializer_list constructed from array
-- move-ctor of dynamic array with allocator is not ok
+- add minimal capcity to dynamic array and circular_array
 - 
 - add other stuff from the stdlib to static array
 - add insert/erase by iterator to static array

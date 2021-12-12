@@ -9,6 +9,7 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 * array
 * static_array
 * dynamic_array
+* circular_array
 * linked_list
 * forward_list
 * buffer
