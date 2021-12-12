@@ -13,64 +13,6 @@
 #include "traits.h"
 
 namespace microc {
-    namespace dynamic_array_traits {
-
-        template< class T > struct remove_reference      {typedef T type;};
-        template< class T > struct remove_reference<T&>  {typedef T type;};
-        template< class T > struct remove_reference<T&&> {typedef T type;};
-
-        template <class _Tp>
-        inline typename remove_reference<_Tp>::type&&
-        move(_Tp&& __t) noexcept
-        {
-            typedef typename remove_reference<_Tp>::type _Up;
-            return static_cast<_Up&&>(__t);
-        }
-
-        template <class _Tp> inline _Tp&&
-        forward(typename remove_reference<_Tp>::type& __t) noexcept
-        {
-            return static_cast<_Tp&&>(__t);
-        }
-
-        template <class _Tp> inline _Tp&&
-        forward(typename remove_reference<_Tp>::type&& __t) noexcept
-        {
-            return static_cast<_Tp&&>(__t);
-        }
-
-        /**
-         * standard allocator
-         * @tparam T the allocated object type
-         */
-        template<typename T>
-        class std_allocator {
-        public:
-            using value_type = T;
-            using size_t = unsigned long;
-        public:
-            template<class U>
-            explicit std_allocator(const std_allocator<U> & other) noexcept { };
-            explicit std_allocator()=default;
-
-            template <class U, class... Args>
-            void construct(U* p, Args&&... args) {
-                ::new(p, microc_new::blah) U(dynamic_array_traits::forward<Args>(args)...);
-            }
-
-            T * allocate(size_t n) { return (T *)operator new(n * sizeof(T)); }
-            void deallocate(T * p, size_t n=0) { operator delete (p); }
-
-            template<class U> struct rebind {
-                typedef std_allocator<U> other;
-            };
-        };
-
-        template<class T1, class T2>
-        bool operator==(const std_allocator<T1>& lhs, const std_allocator<T2>& rhs ) noexcept {
-            return true;
-        }
-    }
 
     /**
      * Minimal vector like container, does not obey all of the propagate syntax that
@@ -78,7 +20,7 @@ namespace microc {
      * @tparam T the type
      * @tparam Alloc the allocator type
      */
-    template<typename T, class Alloc=dynamic_array_traits::std_allocator<T>>
+    template<typename T, class Alloc=microc::std_allocator<T>>
     class dynamic_array {
     public:
         using value_type = T;
@@ -140,7 +82,7 @@ namespace microc {
         dynamic_array(dynamic_array && other, const Alloc & alloc) noexcept :
                 dynamic_array(alloc) {
             reserve(other.size());
-            for (auto & item : other) push_back(dynamic_array_traits::move(item));
+            for (auto & item : other) push_back(microc::traits::move(item));
         }
         dynamic_array(dynamic_array && other) noexcept : dynamic_array{other.get_allocator()} {
             _data = other._data;
@@ -179,7 +121,7 @@ namespace microc {
             T * _new_data = _alloc.allocate(new_cap);
             // move-construct old objects
             for (size_type ix = 0; ix < size(); ++ix)
-                ::new (_new_data + ix, microc_new::blah) T(dynamic_array_traits::move(_data[ix]));
+                ::new (_new_data + ix, microc_new::blah) T(microc::traits::move(_data[ix]));
             _cap = new_cap;
             // no need to destruct because the items were moved
             if(_data) _alloc.deallocate(_data);
@@ -223,7 +165,7 @@ namespace microc {
                 }
                 // move other items into current memory
                 for (size_type ix = 0; ix < other.size(); ++ix)
-                    ::new (_data + ix, microc_new::blah) T(dynamic_array_traits::move(other[ix]));
+                    ::new (_data + ix, microc_new::blah) T(microc::traits::move(other[ix]));
                 // no need to destruct other's items
                 _current = other._current;
                 _cap = other._cap;
@@ -248,7 +190,7 @@ namespace microc {
             // move all previous objects into new location,
             // therefore we do not need to destruct because we move from same allocator
             for (size_type ix = 0; ix < copy_size; ++ix)
-                ::new (_new_data + ix, microc_new::blah) T(dynamic_array_traits::move(_data[ix]));
+                ::new (_new_data + ix, microc_new::blah) T(microc::traits::move(_data[ix]));
 
             // de allocate old data
             _alloc.deallocate(_data, capacity());
@@ -275,7 +217,8 @@ namespace microc {
             } else { // increase capacity and fill extra items
                 const auto delta = count-curr_size;
                 reserve(curr_size+delta);
-                for (size_type ix = 0; ix < delta; ++ix) push_back(microc::traits::forward<TT>(perfect_forwarded_value));
+                for (size_type ix = 0; ix < delta; ++ix)
+                    push_back(microc::traits::forward<TT>(perfect_forwarded_value));
             }
         }
 
@@ -290,12 +233,12 @@ namespace microc {
 
         template<class... Args>
         iterator emplace(const_iterator pos, Args&&... args) {
-            return insert(pos, T(dynamic_array_traits::forward<Args>(args)...));
+            return insert(pos, T(microc::traits::forward<Args>(args)...));
         }
         template<typename... Args>
         reference emplace_back(Args&&... args) {
             if(_current + 1> _cap) alloc_(true);
-            ::new (_data + _current++, microc_new::blah) T(dynamic_array_traits::forward<Args>(args)...);
+            ::new (_data + _current++, microc_new::blah) T(microc::traits::forward<Args>(args)...);
             return back();
         }
 
@@ -343,10 +286,10 @@ namespace microc {
 #undef minnnn
             // move-construct at end the last elements, that belong to this
             for (size_type ix = 0; ix<how_many_veterans_require_move_construction; ++ix) { // count from [N..1]
-                ::new (--new_end, microc_new::blah) T(dynamic_array_traits::move(*(--current_end)));
+                ::new (--new_end, microc_new::blah) T(microc::traits::move(*(--current_end)));
             } // move-assign at end the last elements, that belong to this
             for (size_type ix = 0; ix<how_many_veterans_require_move_assignment; ++ix) { // count from [N..1]
-                *(--new_end) = dynamic_array_traits::move(*(--current_end));
+                *(--new_end) = microc::traits::move(*(--current_end));
             }
             // copy-construct some range elements
             for (size_type ix = 0; ix<how_many_range_require_copy_construction; ++ix) { // count from [N..1]

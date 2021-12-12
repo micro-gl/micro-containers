@@ -91,7 +91,7 @@ namespace microc {
             _cap = other._cap;
             other._data=nullptr;
             other._cap=0;
-            other._current=0;
+            other._back=other._front=0;
         }
         ~circular_array() noexcept { drain(); }
 
@@ -203,7 +203,7 @@ namespace microc {
                 _cap = other._cap;
                 // no need to de-allocate because we stole the memory
                 other._data=nullptr;
-                other._front=0; other._back=0;
+                other._front=other._back=0;
                 other._cap=0;
             } else {
                 if(other.size() >= capacity()) {
