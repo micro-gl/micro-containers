@@ -13,64 +13,6 @@
 #include "traits.h"
 
 namespace microc {
-    namespace dynamic_array_traits {
-
-        template< class T > struct remove_reference      {typedef T type;};
-        template< class T > struct remove_reference<T&>  {typedef T type;};
-        template< class T > struct remove_reference<T&&> {typedef T type;};
-
-        template <class _Tp>
-        inline typename remove_reference<_Tp>::type&&
-        move(_Tp&& __t) noexcept
-        {
-            typedef typename remove_reference<_Tp>::type _Up;
-            return static_cast<_Up&&>(__t);
-        }
-
-        template <class _Tp> inline _Tp&&
-        forward(typename remove_reference<_Tp>::type& __t) noexcept
-        {
-            return static_cast<_Tp&&>(__t);
-        }
-
-        template <class _Tp> inline _Tp&&
-        forward(typename remove_reference<_Tp>::type&& __t) noexcept
-        {
-            return static_cast<_Tp&&>(__t);
-        }
-
-        /**
-         * standard allocator
-         * @tparam T the allocated object type
-         */
-        template<typename T>
-        class std_allocator {
-        public:
-            using value_type = T;
-            using size_t = unsigned long;
-        public:
-            template<class U>
-            explicit std_allocator(const std_allocator<U> & other) noexcept { };
-            explicit std_allocator()=default;
-
-            template <class U, class... Args>
-            void construct(U* p, Args&&... args) {
-                ::new(p, microc_new::blah) U(dynamic_array_traits::forward<Args>(args)...);
-            }
-
-            T * allocate(size_t n) { return (T *)operator new(n * sizeof(T)); }
-            void deallocate(T * p, size_t n=0) { operator delete (p); }
-
-            template<class U> struct rebind {
-                typedef std_allocator<U> other;
-            };
-        };
-
-        template<class T1, class T2>
-        bool operator==(const std_allocator<T1>& lhs, const std_allocator<T2>& rhs ) noexcept {
-            return true;
-        }
-    }
 
     /**
      * Minimal vector like container, does not obey all of the propagate syntax that
@@ -78,18 +20,17 @@ namespace microc {
      * @tparam T the type
      * @tparam Alloc the allocator type
      */
-    template<typename T, class Alloc=dynamic_array_traits::std_allocator<T>>
-    class dynamic_array {
+    template<typename T, class Alloc=microc::std_allocator<T>>
+    class circular_array {
     public:
         using value_type = T;
         using size_type = microc::size_t;
+        using difference_type = microc::ptrdiff_t;
         using allocator_type = Alloc;
         using reference = value_type &;
         using const_reference = const value_type &;
         using pointer = value_type *;
         using const_pointer = const value_type *;
-        using iterator = pointer;
-        using const_iterator = const_pointer;
         struct out_of_bounds_exception {};
 
     private:
@@ -103,101 +44,148 @@ namespace microc {
 
         T *_data;
         rebind_allocator_type _alloc;
-        size_type _current;
         size_type _cap;
+        difference_type _front;
+        difference_type _back;
 
     public:
-        explicit dynamic_array(const Alloc & alloc) noexcept :
-            _data(nullptr), _current(0), _cap(0), _alloc(alloc) {}
-        dynamic_array() noexcept : dynamic_array(Alloc()) {}
-        dynamic_array(const size_type count, const T & value, const Alloc & alloc = Alloc()) :
-                dynamic_array(alloc) {
+        explicit circular_array(const Alloc & alloc) noexcept :
+                _data(nullptr), _front(0), _back(0), _cap(0), _alloc(alloc) {}
+        circular_array() noexcept : circular_array(Alloc()) {}
+        circular_array(const size_type count, const T & value, const Alloc & alloc = Alloc()) :
+                circular_array(alloc) {
             reserve(count);
             for (size_type ix = 0; ix < count; ++ix) push_back(value);
         }
-        explicit dynamic_array(size_type count, const Alloc& alloc = Alloc()) :
-                            dynamic_array(count, T(), alloc) {}
+        explicit circular_array(size_type count, const Alloc& alloc = Alloc()) :
+                circular_array(count, T(), alloc) {}
         template<class Iterable>
-        explicit dynamic_array(const Iterable &list, const Alloc & alloc= Alloc()) :
-                dynamic_array(alloc) {
+        explicit circular_array(const Iterable &list, const Alloc & alloc= Alloc()) :
+                circular_array(alloc) {
             reserve(list.size());
             for (const auto & item : list) push_back(item);
         }
         template<class InputIt, typename bb = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
-        dynamic_array(InputIt first, InputIt last, const Alloc & alloc= Alloc()) :
-                dynamic_array(alloc) {
+        circular_array(InputIt first, InputIt last, const Alloc & alloc= Alloc()) :
+                circular_array(alloc) {
             reserve(last-first);
             while(first!=last) { push_back(*first); ++first; }
         }
-        dynamic_array(const dynamic_array & other, const Alloc & alloc) noexcept :
-                dynamic_array(alloc) {
+        circular_array(const circular_array & other, const Alloc & alloc) noexcept :
+                circular_array(alloc) {
             reserve(other.size());
             for (const auto & item : other) push_back(item);
         }
-        dynamic_array(const dynamic_array & other) noexcept :
-                dynamic_array(other, other.get_allocator()) {
+        circular_array(const circular_array & other) noexcept :
+                circular_array(other, other.get_allocator()) {
         }
-        dynamic_array(dynamic_array && other, const Alloc & alloc) noexcept :
-                dynamic_array(alloc) {
+        circular_array(circular_array && other, const Alloc & alloc) noexcept :
+                circular_array(alloc) {
             reserve(other.size());
-            for (auto & item : other) push_back(dynamic_array_traits::move(item));
+            for (auto & item : other) push_back(microc::traits::move(item));
         }
-        dynamic_array(dynamic_array && other) noexcept : dynamic_array{other.get_allocator()} {
+        circular_array(circular_array && other) noexcept : circular_array{other.get_allocator()} {
             _data = other._data;
-            _current = other._current;
+            _front = other._front;
+            _back = other._back;
             _cap = other._cap;
             other._data=nullptr;
             other._cap=0;
             other._current=0;
         }
-        ~dynamic_array() noexcept { drain(); }
+        ~circular_array() noexcept { drain(); }
+
+    private:
+        template<class value_reference_type>
+        struct iterator_t {
+            difference_type i;
+            const circular_array * c;
+
+            template<class value_reference_type_t>
+            iterator_t(const iterator_t<value_reference_type_t> & other) : i(other.i), c(other.c) {}
+            explicit iterator_t(difference_type idx, const circular_array * c) : i(idx), c(c) {}
+            iterator_t& operator++() { ++i; return *this;}
+            iterator_t& operator--() { --i; return *this;}
+            iterator_t operator++(int) {iterator_t retval(i); ++(*this); return retval;}
+            iterator_t operator--(int) {iterator_t retval(i); --(*this); return retval;}
+            iterator_t operator+(difference_type step) const { return iterator_t(i+step, c); }
+            iterator_t operator-(difference_type step) const { return iterator_t(i-step, c); }
+            difference_type operator-(iterator_t other) const {
+                auto delta = difference_type(i)-difference_type(other.i);
+                return c->_back>c->_front ? delta : -delta;
+            }
+            bool operator>(iterator_t other) const {return ((*this)-other)>0;}
+            bool operator>=(iterator_t other) const {return ((*this)-other)>=0;}
+            bool operator<(iterator_t other) const {return ((*this)-other)<0;}
+            bool operator<=(iterator_t other) const {return ((*this)-other)<=0;}
+            bool operator==(iterator_t other) const {return i == other.i;}
+            bool operator!=(iterator_t other) const {return !(*this == other);}
+            value_reference_type operator*() const {
+                auto * data = const_cast<circular_array *>(c)->_data;
+                auto where = c->mf(i);
+                return data[where];
+            }
+        };
+
+    public:
+        using iterator = iterator_t<reference>;
+        using const_iterator = iterator_t<const_reference>;
+
+        // Iterators
+        const_iterator begin() const noexcept {return iterator(_front, this);}
+        const_iterator end() const noexcept {return iterator(_back, this);}
+        iterator begin() noexcept {return iterator(_front, this);}
+        iterator end()  noexcept {return iterator(_back, this);}
 
         // Element access
-        reference operator[](size_type i) { return _data[i]; }
-        const_reference operator[](size_type i) const { return _data[i]; }
+        size_type front_index() const { return _front; }
+        size_type back_index() const { return _back; }
+        reference operator[](size_type i) { return *(begin()+i); }
+        const_reference operator[](size_type i) const { return *(begin()+i); }
         reference at(size_type pos) {
-            if(pos>=0 && pos < size()) return _data[pos];
+            if(pos>=0 && pos < size()) return this->operator[](pos);
             throw_out_of_bounds_exception_if_can();
         }
         const_reference at(size_type pos) const {
-            if(pos>=0 && pos < size()) return _data[pos];
+            if(pos>=0 && pos < size()) return this->operator[](pos);
             throw_out_of_bounds_exception_if_can();
         }
         T* data() noexcept { return _data; }
         const T* data() const noexcept { return _data; }
-        reference back() { return _data[_current-1]; }
-        reference front() { return _data[0]; }
-        const_reference back() const { return _data[_current-1]; }
-        const_reference front() const { return _data[0]; }
+        reference back() { return *(end()-1); }
+        reference front() { return *(begin()); }
+        const_reference back() const { return *(end()-1); }
+        const_reference front() const { return *(begin()); }
 
         // Capacity
-        bool empty() noexcept { return _current==0; }
-        size_type size() const noexcept { return _current; }
+        bool empty() noexcept { return size()==0; }
+        size_type size() const noexcept {
+            difference_type diff=(end()-begin())-0;
+            return diff;
+        }
         size_type capacity() const noexcept { return _cap; }
         void reserve(size_type new_cap) {
             if(new_cap <= capacity()) return;
             T * _new_data = _alloc.allocate(new_cap);
             // move-construct old objects
             for (size_type ix = 0; ix < size(); ++ix)
-                ::new (_new_data + ix, microc_new::blah) T(dynamic_array_traits::move(_data[ix]));
-            _cap = new_cap;
+                ::new (_new_data + ix, microc_new::blah) T(microc::traits::move(this->operator[](ix)));
+            _cap = new_cap; _front=0; _back=size()+0;
             // no need to destruct because the items were moved
             if(_data) _alloc.deallocate(_data);
             _data = _new_data;
         }
 
         // Assignment operator
-        dynamic_array & operator=(const dynamic_array & other) noexcept {
+        circular_array & operator=(const circular_array & other) noexcept {
             if(this!= &other) {
-                clear();
-                reserve(other.size());
-                for(size_type ix = 0; ix < other.size(); ix++)
-                    push_back(other[ix]);
+                clear(); reserve(other.size());
+                for (const auto & item :other) push_back(item);
             }
             return (*this);
         }
 
-        dynamic_array & operator=(dynamic_array && other) noexcept {
+        circular_array & operator=(circular_array && other) noexcept {
             // two cases:
             // 1. if the allocators are equal, then move the data completely.
             // 2. otherwise, move element by element
@@ -210,12 +198,13 @@ namespace microc {
                 _alloc.deallocate(_data, capacity());
                 // move everything from other
                 _data = other._data;
-                _current = other._current;
+                _front = other._front;
+                _back = other._back;
                 _cap = other._cap;
                 // no need to de-allocate because we stole the memory
                 other._data=nullptr;
+                other._front=0; other._back=0;
                 other._cap=0;
-                other._current=0;
             } else {
                 if(other.size() >= capacity()) {
                     _alloc.deallocate(_data, capacity()); // de allocate the chunk
@@ -223,9 +212,9 @@ namespace microc {
                 }
                 // move other items into current memory
                 for (size_type ix = 0; ix < other.size(); ++ix)
-                    ::new (_data + ix, microc_new::blah) T(dynamic_array_traits::move(other[ix]));
+                    ::new (_data + ix, microc_new::blah) T(microc::traits::move(other[ix]));
                 // no need to destruct other's items
-                _current = other._current;
+                _front = 0; _back = size()+0;
                 _cap = other._cap;
                 // different allocators, we do not de-allocate the other array.
             }
@@ -241,29 +230,44 @@ namespace microc {
         }
         void re_alloc_to(size_type new_capacity) noexcept {
             // re-alloc to another capacity and move old elements
-            const auto old_size = _current;
+            const size_type old_size = size();
             const auto copy_size = old_size < new_capacity ? old_size : new_capacity;
 
             T * _new_data = _alloc.allocate(new_capacity);
             // move all previous objects into new location,
             // therefore we do not need to destruct because we move from same allocator
             for (size_type ix = 0; ix < copy_size; ++ix)
-                ::new (_new_data + ix, microc_new::blah) T(dynamic_array_traits::move(_data[ix]));
+                ::new (_new_data + ix, microc_new::blah) T(microc::traits::move(this->operator[](ix)));
 
             // de allocate old data
             _alloc.deallocate(_data, capacity());
+            _front=0; _back=old_size;
             _data = _new_data;
             _cap = new_capacity;
         }
-        template<class TT>
-        void internal_push_back(TT && v) noexcept {
-            if(size() >= capacity()) {
+        size_type mf(const difference_type pos) const {
+            difference_type ccap = difference_type(_cap);
+            return _cap ? ((pos%ccap)+ccap) % ccap : 0;
+        }
+        template<class TT> void internal_push_back(TT && v) noexcept {
+            if(size()>=capacity()) {
                 // copy the value, edge case if v belongs
                 // to the dynamic array
                 T vv = microc::traits::forward<TT>(v); // copy-or-move ctor
                 alloc_(true);
-                ::new(_data + _current++, microc_new::blah) T(microc::traits::move<TT>(vv));
-            } else ::new(_data + _current++, microc_new::blah) T(microc::traits::forward<TT>(v));;
+                ::new(_data + mf(_back++), microc_new::blah) T(microc::traits::move<TT>(vv));
+            } else ::new(_data + mf(_back++), microc_new::blah) T(microc::traits::forward<TT>(v));
+        }
+        template<class TT> void internal_push_front(TT && v) noexcept {
+            if(size()>=capacity()) {
+                // copy the value, edge case if v belongs
+                // to the dynamic array
+                T vv = microc::traits::forward<TT>(v); // copy-or-move ctor
+                alloc_(true);
+                ::new(_data + mf(--_front), microc_new::blah) T(microc::traits::move<TT>(vv));
+            } else {
+                ::new(_data + mf(--_front), microc_new::blah) T(microc::traits::forward<TT>(v));
+            }
         }
         template<class TT>
         void internal_resize(size_type count, TT && perfect_forwarded_value) {
@@ -283,31 +287,45 @@ namespace microc {
         void push_back(const T & v) noexcept { internal_push_back(v); }
         void push_back(T && v) noexcept { internal_push_back(v); }
         void pop_back() {
-            if(_current==0) return;
-            _data[_current--].~T();
-            if(_current < (_cap>>1)) alloc_(false);
+            if(size()==0) return;
+            _data[--_back].~T();
+            if(size() < (_cap>>1)) alloc_(false);
+        }
+
+        void push_front(const T & v) noexcept { internal_push_front(v); }
+        void push_front(T && v) noexcept { internal_push_front(v); }
+        void pop_front() {
+            if(size()==0) return;
+            _data[_front++].~T();
+            if(size() < (_cap>>1)) alloc_(false);
         }
 
         template<class... Args>
         iterator emplace(const_iterator pos, Args&&... args) {
-            return insert(pos, T(dynamic_array_traits::forward<Args>(args)...));
+            return insert(pos, T(microc::traits::forward<Args>(args)...));
         }
         template<typename... Args>
         reference emplace_back(Args&&... args) {
-            if(_current + 1> _cap) alloc_(true);
-            ::new (_data + _current++, microc_new::blah) T(dynamic_array_traits::forward<Args>(args)...);
+            if(size()>=capacity()) alloc_(true);
+            ::new (_data + mf(_back++), microc_new::blah) T(microc::traits::forward<Args>(args)...);
+            return back();
+        }
+        template<typename... Args>
+        reference emplace_front(Args&&... args) {
+            if(size()>=capacity()) alloc_(true);
+            ::new (_data + mf(--_front), microc_new::blah) T(microc::traits::forward<Args>(args)...);
             return back();
         }
 
         void clear() noexcept {
-            for (size_type ix = 0; ix < size(); ++ix) _data[ix].~T();
-            _current = 0;
+            for (size_type ix = 0; ix < size(); ++ix) (_data + mf(_front + ix))->~T();
+            _front=0; _back=0;
         }
 
         void drain() noexcept {
             clear();
             if(_data) _alloc.deallocate(_data, capacity());
-            _data = nullptr; _cap = _current = 0;
+            _data = nullptr; _cap = 0;
         }
 
         // avoid overload resolution if InputIt is integral type, this can conflict with the
@@ -318,7 +336,7 @@ namespace microc {
                 throw_out_of_bounds_exception_if_can();
                 return end();
             }
-            if(first==last) return const_cast<iterator>(pos);
+            if(first==last) return pos;
             // insert range before pos
             const auto dist_to_first = pos-begin();
             const auto needed_extra_size = last-first;
@@ -326,7 +344,7 @@ namespace microc {
             const auto how_many_to_construct = end()-pos;
             const bool requires_expend = size()+needed_extra_size > capacity();
             if(requires_expend) {
-                re_alloc_to(capacity() + needed_extra_size + 1);
+                re_alloc_to(capacity() + needed_extra_size + 0);
                 // latest pos is no longer valid, memory might have changed
                 pos = begin()+dist_to_first;
             }
@@ -343,21 +361,21 @@ namespace microc {
 #undef minnnn
             // move-construct at end the last elements, that belong to this
             for (size_type ix = 0; ix<how_many_veterans_require_move_construction; ++ix) { // count from [N..1]
-                ::new (--new_end, microc_new::blah) T(dynamic_array_traits::move(*(--current_end)));
+                ::new (&(*(--new_end)), microc_new::blah) T(microc::traits::move(*(--current_end)));
             } // move-assign at end the last elements, that belong to this
             for (size_type ix = 0; ix<how_many_veterans_require_move_assignment; ++ix) { // count from [N..1]
-                *(--new_end) = dynamic_array_traits::move(*(--current_end));
+                *(--new_end) = microc::traits::move(*(--current_end));
             }
             // copy-construct some range elements
             for (size_type ix = 0; ix<how_many_range_require_copy_construction; ++ix) { // count from [N..1]
-                if(!move) ::new (--new_end, microc_new::blah) T(*(--last));
-                else ::new (--new_end, microc_new::blah) T(microc::traits::move(*(--last)));
+                if(!move) ::new (&(*(--new_end)), microc_new::blah) T(*(--last));
+                else ::new (&(*(--new_end)), microc_new::blah) T(microc::traits::move(*(--last)));
             }
             do { // move-or-copy assign remaining items from iterator
                 *(--new_end) = !move ? *(--last) : microc::traits::move(*(--last));
             } while(last!=first);
-            _current += needed_extra_size;
-            return const_cast<iterator>(pos);
+            _back+=needed_extra_size;
+            return pos;
         }
         iterator insert(const_iterator pos, const T& value) {
             if(pos>end() or pos<begin()) {
@@ -365,7 +383,7 @@ namespace microc {
                 return end();
             }
             if(pos==end()) { push_back(value); return end(); }
-            return insert<const_iterator>(pos, &value, (&value)+1);
+            return insert<const T *>(pos, &value, (&value)+1);
         }
         iterator insert(const_iterator pos, T && value) {
             if(pos>end() or pos<begin()) {
@@ -373,7 +391,7 @@ namespace microc {
                 return end();
             }
             if(pos==end()) { push_back(microc::traits::move(value)); return end(); }
-            return insert<const_iterator>(pos, &value, (&value)+1, true);
+            return insert<const T *>(pos, &value, (&value)+1, true);
         }
         iterator insert(const_iterator pos, size_type count, const T& value) {
             if(pos>end() or pos<begin()) {
@@ -382,19 +400,19 @@ namespace microc {
             }
             // this is a very lazy batch insert, correct way it to implement a
             // range iterator that returns the same value
-            auto last_pos = const_cast<iterator>(pos);
+            auto last_pos = pos;
             for (size_type ix = 0; ix < count; ++ix) {
                 last_pos = insert(last_pos, value);
             }
-            return const_cast<iterator>(last_pos-count);
+            return last_pos-count;
         }
 
         iterator erase(const_iterator pos) { return erase(pos, pos+1); }
         iterator erase(const_iterator first, const_iterator last) {
             auto count_to_erase = last-first;
             auto distance_to_first = first - begin();
-            auto move_to_iter = const_cast<iterator>(first);
-            auto last_copy_1 = const_cast<iterator>(last);
+            auto move_to_iter = iterator(first);
+            auto last_copy_1 = last;
             while (last_copy_1!=end()) {
                 *(move_to_iter) = microc::traits::move(*last_copy_1);
                 ++last_copy_1; ++move_to_iter;
@@ -407,21 +425,15 @@ namespace microc {
         void resize(size_type count) { internal_resize(count, T()); }
         void resize(size_type count, const value_type& value) { internal_resize(count, value); }
 
-        // Iterators
-        const_iterator begin() const noexcept {return _data;}
-        const_iterator end() const noexcept {return _data + size();}
-        iterator begin() noexcept {return _data;}
-        iterator end()  noexcept {return _data + size();}
-
         // etc..
         Alloc get_allocator() const noexcept { return Alloc(_alloc); }
     };
 
     template<class T, class Alloc>
-    bool operator==(const dynamic_array<T,Alloc>& lhs,
-                    const dynamic_array<T,Alloc>& rhs ) {
+    bool operator==(const circular_array<T,Alloc>& lhs,
+                    const circular_array<T,Alloc>& rhs ) {
         if(!(lhs.size()==rhs.size())) return false;
-        using size_type = typename dynamic_array<T,Alloc>::size_type;
+        using size_type = typename circular_array<T,Alloc>::size_type;
         for (size_type ix = 0; ix < lhs.size(); ++ix) {
             if(!(lhs[ix]==rhs[ix])) return false;
         }

@@ -17,13 +17,11 @@ namespace microc {
         template< class T > struct remove_reference      {typedef T type;};
         template< class T > struct remove_reference<T&>  {typedef T type;};
         template< class T > struct remove_reference<T&&> {typedef T type;};
-
         template <class _Tp> inline typename remove_reference<_Tp>::type&&
         move(_Tp&& __t) noexcept {
             typedef typename remove_reference<_Tp>::type _Up;
             return static_cast<_Up&&>(__t);
         }
-
         template <class _Tp> inline _Tp&&
         forward(typename remove_reference<_Tp>::type& __t) noexcept
         { return static_cast<_Tp&&>(__t); }
@@ -33,31 +31,53 @@ namespace microc {
         { return static_cast<_Tp&&>(__t); }
     }
 
-    template<typename element_type, class allocator_type>
+    /**
+     * A minimal buffer object that can:
+     * - receive/transfer ownership over data
+     * - be given memory with pointer and size
+     * - be given an allocator to allocate it's own memory
+     * @tparam T
+     * @tparam Alloc
+     */
+    template<typename T, class Alloc>
     class buffer {
+    public:
+        using value_type = T;
+        using size_type = microc::size_t;
+        using allocator_type = Alloc;
+        using reference = value_type &;
+        using const_reference = const value_type &;
+        using pointer = value_type *;
+        using const_pointer = const value_type *;
+        using iterator = pointer;
+        using const_iterator = const_pointer;
+
     private:
-        using rebind_alloc = typename allocator_type::template rebind<element_type>::other;
+        using rebind_alloc = typename Alloc::template rebind<T>::other;
 
         rebind_alloc _allocator;
-        element_type *_data = nullptr;
-        using size_type = microc::size_t;
-        bool owner = false;
-        size_type _size = 0;
+        T *_data;
+        bool owner;
+        size_type _size;
 
-        static element_type * allocate_and_construct(const size_type size, rebind_alloc & allocator) {
-            auto * mem = allocator.allocate(size);
+        static T * allocate_and_default_construct(const size_type size, rebind_alloc & allocator) {
+            auto * mem = allocate(size, allocator);
             for (size_type ix = 0; ix < size; ++ix)
-                ::new (mem+ix, microc_new::blah) element_type();
-            return (element_type *)mem;
+                ::new (mem+ix, microc_new::blah) T();
+            return (T *)mem;
+        }
+
+        static T * allocate(const size_type size, rebind_alloc & allocator) {
+            auto * mem = allocator.allocate(size);
+            return (T *)mem;
         }
 
         void copy_from(const buffer & val) {
             destroyIfPossibleAndReset();
-            _data = allocate_and_construct(val.size(), _allocator); //new element_type[val.size()];
-            _size = val.size();
-            owner = true;
-            for (size_type ix = 0; ix < _size; ++ix)
-                _data[ix]=val._data[ix];
+            _data = allocate(val.size(), _allocator); //new T[val.size()];
+            _size = val.size(); owner = true;
+            for (size_type ix = 0; ix < _size; ++ix) // copy-construct
+                ::new (_data+ix, microc_new::blah) T(val._data[ix]);
         }
 
         void move_from(buffer & val) {
@@ -72,25 +92,26 @@ namespace microc {
             } else {
                 // NOT same allocator then move item by item.
                 destroyIfPossibleAndReset();
-                _data = allocate_and_construct(val.size(), _allocator); //new element_type[val.size()];
-                _size = val.size();
-                owner = true;
+                _data = allocate(val.size(), _allocator);
+                _size = val.size(); owner = true;
+                // move-construct item by item
                 for (size_type ix = 0; ix < _size; ++ix)
-                    _data[ix]=buffer_traits::move(val._data[ix]);
+                    ::new (_data+ix, microc_new::blah) T(buffer_traits::move(val._data[ix]));
             }
             val.destroyIfPossibleAndReset();
         }
 
     public:
-        explicit buffer(size_type size, const allocator_type & allocator) :
-                _size{size}, owner{true}, _allocator(allocator) {
-            _data = allocate_and_construct(size, _allocator);
+        explicit buffer(size_type size, const Alloc & allocator) :
+                _data(nullptr), _size(size), owner(true), _allocator(allocator) {
+            _data = allocate_and_default_construct(size, _allocator);
         }
-        buffer(element_type* $data, size_type size,
-               const allocator_type & allocator=allocator_type()) :
-                        _data{$data}, _size{size}, owner{false}, _allocator(allocator) {}
-        buffer(const buffer & val) : _allocator(val._allocator) { copy_from(val); }
-        buffer(buffer && val) noexcept : _allocator(val._allocator) { move_from(val); }
+        buffer(T* $data, size_type size, const Alloc & allocator=Alloc()) :
+                        _data($data), _size(size), owner(false), _allocator(allocator) {}
+        buffer(const buffer & val) : _allocator(val._allocator), owner(true), _data(nullptr),
+                        _size(0) { copy_from(val); }
+        buffer(buffer && val) noexcept : _allocator(val._allocator), owner(false),
+                                _data(nullptr), _size(0) { move_from(val); }
         ~buffer() { destroyIfPossibleAndReset(); }
 
         buffer & operator=(const buffer & val) {
@@ -103,23 +124,27 @@ namespace microc {
         void destroyIfPossibleAndReset() {
             if(owner) {
                 for (size_type ix = 0; ix < size(); ++ix)
-                    _data[ix].~element_type();
+                    _data[ix].~T();
                 _allocator.deallocate(_data, _size);
             }
-            _data=nullptr;
-            _size=0;
+            _data=nullptr; _size=0; owner=false;
         };
         size_type size() const { return _size; }
-        element_type & readAt(size_type index) { return _data[index]; }
-        void writeAt(const element_type &value, size_type index) { _data[index] = value; }
-        const element_type &operator[](size_type index) const { return _data[index]; }
-        element_type &operator[](size_type index) { return _data[index]; }
-        element_type * data() { return _data; }
-        const element_type * data() const { return _data; }
-        void fill(const element_type &value) {
-            size_type size2 = _size;
-            for (size_type ix = 0; ix < size2; ++ix)
-                _data[ix] = value;
+        reference readAt(size_type index) { return _data[index]; }
+        const_reference readAt(size_type index) const { return _data[index]; }
+        void writeAt(const T &value, size_type index) { _data[index] = value; }
+        const_reference operator[](size_type index) const { return _data[index]; }
+        reference operator[](size_type index) { return _data[index]; }
+        pointer data() { return _data; }
+        const_pointer data() const { return _data; }
+        void fill(const T &value) {
+            for (size_type ix = 0; ix<_size; ++ix) _data[ix] = value;
         }
+        allocator_type get_allocator() { return _allocator; }
+
+        iterator begin() { return _data; }
+        const_iterator begin() const { return _data; }
+        iterator end() { return _data + _size; }
+        const_iterator end() const { return _data + _size; }
     };
 }

@@ -1,12 +1,12 @@
 #include "src/test_utils.h"
-#include <micro-containers/dynamic_array.h>
+#include <micro-containers/circular_array.h>
 
 using namespace microc;
 
 void test_insert() {
     print_test_header("test_insert");
 
-    using c = dynamic_array<int>;
+    using c = circular_array<int>;
     c vec(3, 100);
     std::cout << "\n- vec(3, 100) \n";
     print_simple_container(vec);
@@ -24,6 +24,8 @@ void test_insert() {
     it = vec.begin();
 
     c vec2(2, 400);
+    std::cout << "\n- vec2 is \n";
+    print_simple_container(vec2);
     vec.insert(it+2, vec2.begin(), vec2.end());
     std::cout << "\n- vec.insert(it+2, vec2.begin(), vec2.end()) \n";
     print_simple_container(vec);
@@ -38,7 +40,7 @@ void test_insert() {
 void test_erase() {
     print_test_header("test_erase");
 
-    using container = dynamic_array<int>;
+    using container = circular_array<int>;
 
     int aa[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     container c;
@@ -79,7 +81,7 @@ void test_erase() {
 void test_resize() {
     print_test_header("test_resize");
 
-    using container = dynamic_array<int>;
+    using container = circular_array<int>;
     int a[] = {1, 2, 3};
     container c;
     c.push_back(1);
@@ -107,11 +109,83 @@ void test_resize() {
     std::cout << '\n';
 }
 
+void test_push_and_pop_back() {
+    print_test_header("test_push_and_pop_back");
+
+    using container = circular_array<int>;
+    int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    container c;
+
+    for(auto & item : a) c.push_back(item);
+
+    std::cout << "- The array holds after push_back: \n";
+    print_simple_container(c);
+
+    while(!c.empty()) c.pop_back();
+    std::cout << "- The array holds after pop_back: \n";
+    print_simple_container(c);
+}
+
+void test_push_and_pop_front() {
+    print_test_header("test_push_and_pop_front");
+
+    using container = circular_array<int>;
+    int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    container c;
+
+    for(auto & item : a) c.push_front(item);
+
+    std::cout << "- The array holds after push_front: \n";
+    print_simple_container(c);
+
+    while(!c.empty()) c.pop_front();
+    std::cout << "- The array holds after pop_front: \n";
+    print_simple_container(c);
+}
+
+void test_emplace_back_and_front() {
+    print_test_header("test_emplace_back_and_front");
+
+    using container = circular_array<dummy_t>;
+    container c;
+
+    c.emplace_back(4, 5);
+    c.emplace_back(6, 7);
+    std::cout << "- The array holds after emplace_back(1,2) and emplace_back(3,4): \n";
+    print_simple_container(c);
+
+    c.emplace_front(2, 3);
+    c.emplace_front(0, 1);
+    std::cout << "- The array holds after emplace_front(2, 3) and emplace_front(0, 1): \n";
+    print_simple_container(c);
+}
+
+void test_clear() {
+    print_test_header("test_clear");
+
+    using container = circular_array<int>;
+    int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    container c;
+
+    for(auto & item : a) c.push_front(item);
+
+    std::cout << "- The array holds after push_front: \n";
+    print_simple_container(c);
+
+    c.clear();
+    std::cout << "- The array holds after clear(): \n";
+    print_simple_container(c);
+}
+
 
 int main() {
     // modifiers
-    test_insert();
+//    test_insert();
 //    test_erase();
 //    test_resize();
+//    test_push_and_pop_back();
+//    test_push_and_pop_front();
+//    test_emplace_back_and_front();
+    test_clear();
 }
 

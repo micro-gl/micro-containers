@@ -1,8 +1,9 @@
 - span
 - initializer_list constructed from array
+- move-ctor of dynamic array with allocator is not ok
 - 
 - add other stuff from the stdlib to static array
-- add insert/erase by iterator to dynamic array and static array
+- add insert/erase by iterator to static array
 - 
 - decide weather every class is stand alone or uses traits.h
 - design some algorithms like for_each, range, etc...
