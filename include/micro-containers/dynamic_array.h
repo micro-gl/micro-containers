@@ -365,9 +365,8 @@ namespace microc {
                     const dynamic_array<T,Alloc>& rhs ) {
         if(!(lhs.size()==rhs.size())) return false;
         using size_type = typename dynamic_array<T,Alloc>::size_type;
-        for (size_type ix = 0; ix < lhs.size(); ++ix) {
+        for (size_type ix = 0; ix < lhs.size(); ++ix)
             if(!(lhs[ix]==rhs[ix])) return false;
-        }
         return true;
     }
 }

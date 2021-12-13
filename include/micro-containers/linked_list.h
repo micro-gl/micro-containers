@@ -13,67 +13,13 @@
 #include "traits.h"
 
 namespace microc {
-    namespace linked_list_traits {
-
-        template< class T > struct remove_reference      {typedef T type;};
-        template< class T > struct remove_reference<T&>  {typedef T type;};
-        template< class T > struct remove_reference<T&&> {typedef T type;};
-        template <class _Tp> inline typename remove_reference<_Tp>::type&&
-        move(_Tp&& __t) noexcept {
-            typedef typename remove_reference<_Tp>::type _Up;
-            return static_cast<_Up&&>(__t);
-        }
-        template <class _Tp> inline _Tp&&
-        forward(typename remove_reference<_Tp>::type& __t) noexcept {
-            return static_cast<_Tp&&>(__t);
-        }
-        template <class _Tp> inline _Tp&&
-        forward(typename remove_reference<_Tp>::type&& __t) noexcept {
-            return static_cast<_Tp&&>(__t);
-        }
-        template<bool, class _Tp = void> struct enable_if {};
-        template<class _Tp> struct enable_if<true, _Tp> { typedef _Tp type; };
-
-        /**
-         * standard allocator
-         * @tparam T the allocated object type
-         */
-        template<typename T>
-        class std_allocator {
-        public:
-            using value_type = T;
-            using size_t = unsigned long;
-        public:
-            template<class U>
-            explicit std_allocator(const std_allocator<U> & other) noexcept { };
-            explicit std_allocator()=default;
-
-            template <class U, class... Args>
-            void construct(U* p, Args&&... args) {
-                ::new(p, microc_new::blah) U(linked_list_traits::forward<Args>(args)...);
-            }
-
-            T * allocate(size_t n) { return (T *)operator new(n * sizeof(T)); }
-            void deallocate(T * p, size_t n=0) { operator delete (p); }
-
-            template<class U> struct rebind {
-                typedef std_allocator<U> other;
-            };
-        };
-
-        template<class T1, class T2>
-        bool operator==(const std_allocator<T1>& lhs, const std_allocator<T2>& rhs ) noexcept {
-            return true;
-        }
-    }
-
     /**
      * Doubly-connected Circular Linked List like container, does not obey all of the propagate syntax that
      * Allocator Aware Container follows
      * @tparam T the type
      * @tparam Allocator the allocator type
      */
-    template<typename T, class Allocator=linked_list_traits::std_allocator<T>>
+    template<typename T, class Allocator=microc::std_allocator<T>>
     class linked_list {
     public:
         using value_type = T;
@@ -97,10 +43,10 @@ namespace microc {
             node_t(const value_type & $value) :
                     node_base_t(), value($value) {}
             node_t(value_type && $value) :
-                    node_base_t(), value(linked_list_traits::move($value)) {}
+                    node_base_t(), value(microc::traits::move($value)) {}
             template<class... Args>
             node_t(Args&&... args) : node_base_t(),
-                                     value(linked_list_traits::forward<Args>(args)...) {}
+                                     value(microc::traits::forward<Args>(args)...) {}
             value_type value;
         };
 
@@ -168,12 +114,10 @@ namespace microc {
                 _sentinel_node(), _size(0), _alloc{allocator} {
             reset_sentinel();
         }
-
         linked_list(const size_type count, const T & value, const Allocator & alloc = Allocator()) :
                 linked_list(alloc) {
             for (size_type ix = 0; ix < count; ++ix) push_back(value);
         }
-
         linked_list(const size_type count, const Allocator & allocator = Allocator()) :
                 linked_list(count, T(), allocator) {}
 
@@ -182,15 +126,15 @@ namespace microc {
                 linked_list(allocator) {
             for (const auto & item : list) push_back(item);
         }
-
+        template<class InputIt, typename = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
+        linked_list(InputIt first, InputIt last, const Allocator& alloc = Allocator()) : linked_list(alloc) {
+            while(first!=last) { push_back(*first); ++first; }
+        }
         linked_list(const linked_list & other, const Allocator & allocator) noexcept :
                 linked_list(allocator) {
             for (const auto & item : other) push_back(item);
         }
-
-        linked_list(const linked_list & other) noexcept :
-                linked_list(other, other.get_allocator()) {}
-
+        linked_list(const linked_list & other) noexcept : linked_list(other, other.get_allocator()) {}
         linked_list(linked_list && other, const Allocator & allocator) noexcept :
                 linked_list(allocator) {
             const bool are_equal_allocators = allocator==other.get_allocator();
@@ -204,13 +148,13 @@ namespace microc {
                 other._size = 0;
             } else {
                 for (auto & item : other)
-                    push_back(linked_list_traits::move(item));
+                    push_back(microc::traits::move(item));
                 other.clear();
             }
         }
 
         linked_list(linked_list && other) noexcept :
-                    linked_list{linked_list_traits::move(other), other.get_allocator()} {}
+                    linked_list{microc::traits::move(other), other.get_allocator()} {}
 
         ~linked_list() noexcept { clear(); }
 
@@ -242,7 +186,7 @@ namespace microc {
                 other._size = 0;
             } else {
                 for (auto & item : other)
-                    push_back(linked_list_traits::move(item));
+                    push_back(microc::traits::move(item));
                 other.clear();
             }
             return (*this);
@@ -256,13 +200,13 @@ namespace microc {
         }
         node_t * create_node(value_type && value) {
             node_t * node = _alloc.allocate(1);
-            ::new(node, microc_new::blah) node_t(linked_list_traits::move(value)); // construct
+            ::new(node, microc_new::blah) node_t(microc::traits::move(value)); // construct
             return node;
         }
         template<class... Args>
         node_t * create_node(Args &&... args) {
             node_t * node = _alloc.allocate(1);
-            ::new (node, microc_new::blah) node_t(linked_list_traits::forward<Args>(args)...); // construct
+            ::new (node, microc_new::blah) node_t(microc::traits::forward<Args>(args)...); // construct
             return node;
         }
         iterator insert_node_internal(const_iterator pos, node_t * node) {
@@ -285,7 +229,7 @@ namespace microc {
         }
         iterator insert(const_iterator pos, T&& value) {
             // insert_node a new node before pos
-            return insert_node_internal(pos, create_node(linked_list_traits::move(value)));
+            return insert_node_internal(pos, create_node(microc::traits::move(value)));
         }
         iterator insert(const_iterator pos, size_type count, const T & value) {
             if(count==0) return pos;
@@ -294,12 +238,12 @@ namespace microc {
                 insert(pos, value);
             return first_pos;
         }
-        template<class InputIt>
+        template<class InputIt, typename = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
         iterator insert(const_iterator pos, InputIt first, InputIt last ) {
             iterator iter(pos); --iter;
-            do {
-                insert(pos, *first);
-            } while (++first!=last);
+            while(first!=last) {
+                insert(pos, *first); ++first;
+            }
             return ++iter;
         }
 
@@ -308,7 +252,7 @@ namespace microc {
         iterator insert_emplace(const_iterator pos, Args&&... args) {
             // insert_node a new node before pos
             return insert_node_internal(pos,
-                        create_node(linked_list_traits::forward<Args>(args)...));
+                        create_node(microc::traits::forward<Args>(args)...));
         }
 
     public:
@@ -337,22 +281,32 @@ namespace microc {
         }
 
         void push_back(const T & value) { insert(cend(), value); }
-        void push_back(T && value) { insert(cend(), linked_list_traits::move(value)); }
+        void push_back(T && value) { insert(cend(), microc::traits::move(value)); }
         void push_front(const T & value) { insert(cbegin(), value); }
-        void push_front(T && value) { insert(cbegin(), linked_list_traits::move(value)); }
+        void push_front(T && value) { insert(cbegin(), microc::traits::move(value)); }
         void pop_back() { if(empty()) return; erase(--cend()); }
         void pop_front() { if(empty()) return; erase(cbegin()); }
 
         template<typename... Args>
         iterator emplace(const_iterator pos, Args&&... args)
-        { return insert_emplace(pos, linked_list_traits::forward<Args>(args)...); }
+        { return insert_emplace(pos, microc::traits::forward<Args>(args)...); }
         template<typename... Args>
         iterator emplace_back(Args&&... args)
-        { return emplace<Args...>(end(), linked_list_traits::forward<Args>(args)...); }
+        { return emplace<Args...>(end(), microc::traits::forward<Args>(args)...); }
         template<typename... Args>
         iterator emplace_front(Args&&... args)
-        { return emplace<Args...>(begin(), linked_list_traits::forward<Args>(args)...); }
+        { return emplace<Args...>(begin(), microc::traits::forward<Args>(args)...); }
 
         void clear() { while (size()) erase(--end()); reset_sentinel(); }
     };
+
+    template<class T, class Allocator> bool operator==(const linked_list<T, Allocator>& lhs,
+                    const linked_list<T, Allocator>& rhs ) {
+        if(!(lhs.size()==rhs.size())) return false;
+        using size_type = typename linked_list<T, Allocator>::size_type;
+        for (size_type ix = 0; ix < lhs.size(); ++ix)
+            if(!(lhs[ix]==rhs[ix])) return false;
+        return true;
+    }
+
 }

@@ -59,6 +59,19 @@ void test_insert_after_many_uniform_values() {
     print_simple_container(list1);
 }
 
+void test_insert_after_with_iterator() {
+    print_test_header("test_insert_after_with_iterator");
+
+    int ll[] = {10, 20, 30, 40, 50};
+
+    forward_list<int> list1{};
+
+    //
+    list1.insert_after(list1.begin(), ll, ll+5);
+    std::cout << "- list1 after iterator inserting " << std::endl;
+    print_simple_container(list1);
+}
+
 void test_pop_front() {
     print_test_header("test_pop_front");
     forward_list<int> list1{};
@@ -280,6 +293,7 @@ int main() {
     test_pop_front();
     test_insert_after();
     test_insert_after_many_uniform_values();
+    test_insert_after_with_iterator();
     test_emplace_front();
     test_emplace_after();
     test_erase_after();

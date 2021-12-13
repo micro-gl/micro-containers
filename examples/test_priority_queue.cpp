@@ -22,7 +22,7 @@ void test_1() {
 
     print_queue(q);
 
-    microc::priority_queue<int, std::vector<int>, std::greater<int>>
+    microc::priority_queue<int, std::vector<int>, std::less<int>>
             q2(data.begin(), data.end());
 
     print_queue(q2);

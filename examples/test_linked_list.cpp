@@ -210,6 +210,17 @@ void test_insert_with_iterator() {
     print_simple_container(list2);
 }
 
+void test_insert_with_iterator_2() {
+    print_test_header("test_insert_with_iterator_2");
+    linked_list<int> list1;
+
+    int ll[] = {1,2,3,4,5};
+
+    list1.insert(list1.begin(), ll, ll+5);
+    std::cout << "list2 after iterator insert" << std::endl;
+    print_simple_container(list1);
+}
+
 void test_push_front() {
     print_test_header("test_push_front");
     linked_list<float> list1{};
@@ -305,6 +316,7 @@ int main() {
     test_insert_single();
     test_insert_multi();
     test_insert_with_iterator();
+    test_insert_with_iterator_2();
     test_construct_copy();
     test_construct_move();
     test_push_front();

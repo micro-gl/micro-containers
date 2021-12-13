@@ -70,7 +70,7 @@ namespace microc {
      * @tparam N the fixed capacity
      * @tparam fake_allocator A fake allocator
      */
-    template<typename T, unsigned N, class fake_allocator=static_array_traits::void_allocator<>>
+    template<class T, unsigned N, class fake_allocator=static_array_traits::void_allocator<>>
     class static_array {
     public:
         using value_type = T;
@@ -167,4 +167,15 @@ namespace microc {
         const T* begin() const { return _data; }
         const T* end() const { return _data + _current; }
     };
+
+    template<class T, unsigned N, class fake_allocator>
+    bool operator==(const static_array<T, N, fake_allocator>& lhs,
+                    const static_array<T, N, fake_allocator>& rhs ) {
+        if(!(lhs.size()==rhs.size())) return false;
+        using size_type = typename static_array<T, N, fake_allocator>::size_type;
+        for (size_type ix = 0; ix < lhs.size(); ++ix)
+            if(!(lhs[ix]==rhs[ix])) return false;
+        return true;
+    }
+
 }

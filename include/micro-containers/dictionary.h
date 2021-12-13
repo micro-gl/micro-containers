@@ -239,4 +239,15 @@ namespace microc {
             return current;
         }
     };
+
+    template<class Key, class T, class Compare, class Allocator>
+    bool operator==(const dictionary<Key, T, Compare, Allocator>& lhs,
+                    const dictionary<Key, T, Compare, Allocator>& rhs ) {
+        if(!(lhs.size()==rhs.size())) return false;
+        using size_type = typename dictionary<Key, T, Compare, Allocator>::size_type;
+        for (size_type ix = 0; ix < lhs.size(); ++ix) {
+            if(!(lhs[ix]==rhs[ix])) return false;
+        }
+        return true;
+    }
 }

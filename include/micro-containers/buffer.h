@@ -147,4 +147,15 @@ namespace microc {
         iterator end() { return _data + _size; }
         const_iterator end() const { return _data + _size; }
     };
+
+    template<class T, class Allocator>
+    bool operator==(const buffer<T, Allocator>& lhs,
+                    const buffer<T, Allocator>& rhs ) {
+        if(!(lhs.size()==rhs.size())) return false;
+        using size_type = typename buffer<T, Allocator>::size_type;
+        for (size_type ix = 0; ix < lhs.size(); ++ix)
+            if(!(lhs[ix]==rhs[ix])) return false;
+        return true;
+    }
+
 }

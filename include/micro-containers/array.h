@@ -105,4 +105,13 @@ namespace microc {
         const value_type* data() const noexcept {return _data;}
     };
 
+    template<class T, microc::size_t N>
+    bool operator==(const array<T, N>& lhs,
+                    const array<T, N>& rhs ) {
+        if(!(lhs.size()==rhs.size())) return false;
+        using size_type = typename array<T, N>::size_type;
+        for (size_type ix = 0; ix < lhs.size(); ++ix)
+            if(!(lhs[ix]==rhs[ix])) return false;
+        return true;
+    }
 }

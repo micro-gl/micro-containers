@@ -200,4 +200,15 @@ namespace microc {
             return current;
         }
     };
+
+    template<class Key, class Compare, class Allocator>
+    bool operator==(const ordered_set<Key, Compare, Allocator>& lhs,
+                    const ordered_set<Key, Compare, Allocator>& rhs ) {
+        if(!(lhs.size()==rhs.size())) return false;
+        using size_type = typename ordered_set<Key, Compare, Allocator>::size_type;
+        for (size_type ix = 0; ix < lhs.size(); ++ix) {
+            if(!(lhs[ix]==rhs[ix])) return false;
+        }
+        return true;
+    }
 }

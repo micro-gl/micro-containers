@@ -543,4 +543,15 @@ namespace microc {
             return node; // balancing is not required
         }
     };
+
+    template<class StoreItemType, class Key, class Compare,
+            class KeyExtractFunction, class Allocator>
+    bool operator==(const avl_tree<StoreItemType, Key, Compare, KeyExtractFunction, Allocator>& lhs,
+                    const avl_tree<StoreItemType, Key, Compare, KeyExtractFunction, Allocator>& rhs ) {
+        if(!(lhs.size()==rhs.size())) return false;
+        using size_type = typename avl_tree<StoreItemType, Key, Compare, KeyExtractFunction, Allocator>::size_type;
+        for (size_type ix = 0; ix < lhs.size(); ++ix)
+            if(!(lhs[ix]==rhs[ix])) return false;
+        return true;
+    }
 }

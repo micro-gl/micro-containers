@@ -86,4 +86,16 @@ namespace microc {
         // meta
         container_type & get_container() { return c; }
     };
+
+    template<class T, class Container>
+    bool operator==(const stack<T, Container>& lhs,
+                    const stack<T, Container>& rhs ) {
+        if(!(lhs.size()==rhs.size())) return false;
+        using size_type = typename stack<T, Container>::size_type;
+        for (size_type ix = 0; ix < lhs.size(); ++ix) {
+            if(!(lhs[ix]==rhs[ix])) return false;
+        }
+        return true;
+    }
+
 }

@@ -1,10 +1,5 @@
 - span
+- string
 - initializer_list constructed from array
-- add minimal capcity to dynamic array and circular_array
 - 
-- add other stuff from the stdlib to static array
-- add insert/erase by iterator to static array
-- 
-- decide weather every class is stand alone or uses traits.h
 - design some algorithms like for_each, range, etc...
-- add == operator outside for each container

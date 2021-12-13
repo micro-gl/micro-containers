@@ -13,7 +13,6 @@
 #include "algorithm.h"
 
 namespace microc {
-
     /**
      * A priority queue is a container adaptor that provides constant time lookup of the
      * largest (by default) element, at the expense of logarithmic insertion and extraction.
@@ -151,4 +150,15 @@ namespace microc {
         container_type & get_container() { return c; }
         value_compare & get_comparator() { return comp; }
     };
+
+    template<class T, class Container, class Compare>
+    bool operator==(const priority_queue<T, Container, Compare>& lhs,
+                    const priority_queue<T, Container, Compare>& rhs ) {
+        if(!(lhs.size()==rhs.size())) return false;
+        using size_type = typename priority_queue<T, Container, Compare>::size_type;
+        for (size_type ix = 0; ix < lhs.size(); ++ix) {
+            if(!(lhs[ix]==rhs[ix])) return false;
+        }
+        return true;
+    }
 }

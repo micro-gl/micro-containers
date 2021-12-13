@@ -532,4 +532,14 @@ namespace microc {
             return insert(value_type(microc::traits::forward<Args>(args)...));
         }
     };
+
+    template<class Key, class T, class Hash, class Allocator>
+    bool operator==(const hash_map<Key, T, Hash, Allocator>& lhs,
+                    const hash_map<Key, T, Hash, Allocator>& rhs ) {
+        if(!(lhs.size()==rhs.size())) return false;
+        using size_type = typename hash_map<Key, T, Hash, Allocator>::size_type;
+        for (size_type ix = 0; ix < lhs.size(); ++ix)
+            if(!(lhs[ix]==rhs[ix])) return false;
+        return true;
+    }
 }

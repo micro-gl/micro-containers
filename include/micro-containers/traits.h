@@ -102,6 +102,16 @@ namespace microc {
         template<> struct is_integral<unsigned> { constexpr static bool value = true; };
         template<> struct is_integral<signed> { constexpr static bool value = true; };
         template<> struct is_integral<char> { constexpr static bool value = true; };
+
+        template<typename _Tp, typename _Up = _Tp&&>
+        _Up __declval(int);  // (1)
+
+        template<typename _Tp>
+        _Tp __declval(long); // (2)
+
+        template<typename _Tp>
+        auto declval() noexcept -> decltype(__declval<_Tp>(0));
+
     }
 }
 
