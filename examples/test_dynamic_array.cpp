@@ -111,7 +111,7 @@ void test_resize() {
 int main() {
     // modifiers
     test_insert();
-//    test_erase();
-//    test_resize();
+    test_erase();
+    test_resize();
 }
 

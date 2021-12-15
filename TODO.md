@@ -3,3 +3,4 @@
 - initializer_list constructed from array
 - 
 - design some algorithms like for_each, range, etc...
+- begin, end iterators for 0 capcity containers

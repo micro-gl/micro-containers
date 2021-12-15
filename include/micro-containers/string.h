@@ -110,6 +110,7 @@ namespace microc {
         rebind_allocator_type _alloc;
         size_type _cap;
         size_type _current;
+        static const CharT _null_char = 0;
 
     public:
         // ctors
@@ -228,9 +229,9 @@ namespace microc {
             if(pos>=0 && pos < size()) return _data[pos];
             throw_out_of_bounds_exception_if_can();
         }
-        CharT* data() noexcept { return _data; }
-        const CharT* data() const noexcept { return _data; }
-        const CharT* c_str() const noexcept { return _data; }
+        CharT* data() noexcept { return size() ? _data : &_null_char; }
+        const CharT* data() const noexcept { return size() ? _data : &_null_char;; }
+        const CharT* c_str() const noexcept { return data(); }
         reference back() { return _data[_current-1]; }
         reference front() { return _data[0]; }
         const_reference back() const { return _data[_current-1]; }
@@ -243,14 +244,15 @@ namespace microc {
         void shrink_to_fit() { re_alloc_to(size()); }
         void reserve(size_type new_cap) {
             if(new_cap <= capacity()) return;
-            CharT * _new_data = _alloc.allocate(new_cap);
-            // move-construct old objects
-            for (size_type ix = 0; ix < size(); ++ix)
-                ::new (_new_data + ix, microc_new::blah) CharT(microc::traits::move(_data[ix]));
-            _cap = new_cap;
-            // no need to destruct because the items were moved
-            if(_data) _alloc.deallocate(_data);
-            _data = _new_data;
+            re_alloc_to(new_cap);
+//            CharT * _new_data = _alloc.allocate(new_cap);
+//            // move-construct old objects
+//            for (size_type ix = 0; ix < size(); ++ix)
+//                ::new (_new_data + ix, microc_new::blah) CharT(microc::traits::move(_data[ix]));
+//            _cap = new_cap;
+//            // no need to destruct because the items were moved
+//            if(_data) _alloc.deallocate(_data);
+//            _data = _new_data;
         }
 
         // Modifiers
@@ -260,30 +262,39 @@ namespace microc {
             re_alloc_to(new_cap);
         }
         void re_alloc_to(size_type new_capacity) noexcept {
+            if(capacity()==new_capacity) return;
+            // if requested cap is not zero, then reserve another place for null-terminated char
+            if(new_capacity>0) new_capacity+=1;
             // re-alloc to another capacity and move old elements
             const auto old_size = _current;
             const auto copy_size = old_size < new_capacity ? old_size : new_capacity;
 
-            CharT * _new_data = _alloc.allocate(new_capacity);
+            CharT * _new_data = nullptr;
+            if(new_capacity) _new_data = _alloc.allocate(new_capacity);
             // move all previous objects into new location,
             // therefore we do not need to destruct because we move from same allocator
-            for (size_type ix = 0; ix < copy_size; ++ix)
-                ::new (_new_data + ix, microc_new::blah) CharT(microc::traits::move(_data[ix]));
-
+            if(copy_size) {
+                for (size_type ix = 0; ix < copy_size; ++ix) // including null terminator
+                    ::new (_new_data + ix, microc_new::blah) CharT(microc::traits::move(_data[ix]));
+                // add null termination char
+                const auto _end = old_size < new_capacity ? old_size : (new_capacity-1);
+                traits_type::assign(*(_new_data+_end), value_type());
+            }
             // de allocate old data
-            _alloc.deallocate(_data, capacity());
+            if(_data) _alloc.deallocate(_data, capacity());
             _data = _new_data;
             _cap = new_capacity;
         }
-        template<class TT>
-        void internal_push_back(TT && v) noexcept {
+        void write_null_termination_at_end() { traits_type::assign(*end(), value_type()); }
+        template<class TT> void internal_push_back(TT && v) noexcept {
             if(size() >= capacity()) {
                 // copy the value, edge case if v belongs
                 // to the dynamic array
                 CharT vv = microc::traits::forward<TT>(v); // copy-or-move ctor
                 alloc_(true);
                 ::new(_data + _current++, microc_new::blah) CharT(microc::traits::move<TT>(vv));
-            } else ::new(_data + _current++, microc_new::blah) CharT(microc::traits::forward<TT>(v));;
+            } else ::new(_data + _current++, microc_new::blah) CharT(microc::traits::forward<TT>(v));
+            write_null_termination_at_end();
         }
         template<class TT>
         void internal_resize(size_type count, TT && perfect_forwarded_value) {
@@ -298,6 +309,7 @@ namespace microc {
                 for (size_type ix = 0; ix < delta; ++ix)
                     push_back(microc::traits::forward<TT>(perfect_forwarded_value));
             }
+            write_null_termination_at_end();
         }
 
     public:
@@ -320,8 +332,9 @@ namespace microc {
         void push_back(CharT && v) noexcept { internal_push_back(v); }
         void pop_back() {
             if(_current==0) return;
-            _data[_current--].~T();
-            if(_current < (_cap>>1)) alloc_(false);
+            _data[_current--].~value_type();
+            if(size()==0 or (size() < (capacity()>>1))) alloc_(false);
+            write_null_termination_at_end();
         }
 
         template<class... Args>
@@ -480,10 +493,10 @@ namespace microc {
 
         bool starts_with(CharT c) const noexcept { return find(c)==0; }
         bool starts_with(const CharT* s) const { return find(s)==0; }
-        bool ends_with(CharT c) const noexcept { return find(c)==size()-1; }
+        bool ends_with(CharT c) const noexcept { return find(c, size()-1)==size()-1; }
         bool ends_with(const CharT* s) const {
             const auto str_len = traits_type::length(s);
-            return find(s, 0, str_len)==size()-str_len;
+            return find(s, size()-str_len, str_len)==size()-str_len;
         }
 
 

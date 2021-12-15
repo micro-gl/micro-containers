@@ -13,7 +13,22 @@ void test_1() {
     print_simple_container(a);
 }
 
+#include <string>
+using namespace std;
 int main() {
     test_1();
+
+    int * aa = nullptr;
+    aa = aa+1;
+    string a = "abdwewewe";
+    auto b = a.size();
+    a.shrink_to_fit();
+    a.pop_back();
+    a.pop_back();
+    a.push_back('c');
+    a.pop_back();
+    a.pop_back();
+    a.pop_back();
+
 }
 

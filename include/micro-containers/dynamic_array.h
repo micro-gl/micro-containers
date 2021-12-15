@@ -116,14 +116,7 @@ namespace microc {
         void shrink_to_fit() { re_alloc_to(size()); }
         void reserve(size_type new_cap) {
             if(new_cap <= capacity()) return;
-            T * _new_data = _alloc.allocate(new_cap);
-            // move-construct old objects
-            for (size_type ix = 0; ix < size(); ++ix)
-                ::new (_new_data + ix, microc_new::blah) T(microc::traits::move(_data[ix]));
-            _cap = new_cap;
-            // no need to destruct because the items were moved
-            if(_data) _alloc.deallocate(_data);
-            _data = _new_data;
+            re_alloc_to(new_cap);
         }
 
         // Assignment operator
@@ -180,18 +173,21 @@ namespace microc {
             re_alloc_to(new_cap);
         }
         void re_alloc_to(size_type new_capacity) noexcept {
+            // warning, if allocating down, _current/size() becomes dangling, so
+            // you have to take care of it externally.
             // re-alloc to another capacity and move old elements
             const auto old_size = _current;
             const auto copy_size = old_size < new_capacity ? old_size : new_capacity;
 
-            T * _new_data = _alloc.allocate(new_capacity);
+            T * _new_data = nullptr;
+            if(new_capacity) _new_data = _alloc.allocate(new_capacity);
             // move all previous objects into new location,
             // therefore we do not need to destruct because we move from same allocator
             for (size_type ix = 0; ix < copy_size; ++ix)
                 ::new (_new_data + ix, microc_new::blah) T(microc::traits::move(_data[ix]));
 
             // de allocate old data
-            _alloc.deallocate(_data, capacity());
+            if(_data) _alloc.deallocate(_data, capacity());
             _data = _new_data;
             _cap = new_capacity;
         }
@@ -224,9 +220,9 @@ namespace microc {
         void push_back(const T & v) noexcept { internal_push_back(v); }
         void push_back(T && v) noexcept { internal_push_back(v); }
         void pop_back() {
-            if(_current==0) return;
+            if(size()==0) return;
             _data[_current--].~T();
-            if(_current < (_cap>>1)) alloc_(false);
+            if(size()==0 or (size()<(capacity()>>1))) alloc_(false);
         }
 
         template<class... Args>
