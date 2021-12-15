@@ -31,6 +31,7 @@ set(SOURCES
         test_heap.cpp
         test_priority_queue.cpp
         test_buffer.cpp
+        test_string.cpp
         )
 
 set(SOURCES_SHARED "" src/test_utils.h)

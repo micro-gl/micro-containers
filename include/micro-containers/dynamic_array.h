@@ -61,10 +61,7 @@ namespace microc {
                             dynamic_array(count, T(), alloc) {}
         template<class Iterable>
         explicit dynamic_array(const Iterable &list, const Alloc & alloc= Alloc()) :
-                dynamic_array(alloc) {
-            reserve(list.size());
-            for (const auto & item : list) push_back(item);
-        }
+                dynamic_array(list.begin(), list.end(), alloc) {}
         template<class InputIt, typename bb = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
         dynamic_array(InputIt first, InputIt last, const Alloc & alloc= Alloc()) :
                 dynamic_array(alloc) {
@@ -116,6 +113,7 @@ namespace microc {
         bool empty() noexcept { return _current==0; }
         size_type size() const noexcept { return _current; }
         size_type capacity() const noexcept { return _cap; }
+        void shrink_to_fit() { re_alloc_to(size()); }
         void reserve(size_type new_cap) {
             if(new_cap <= capacity()) return;
             T * _new_data = _alloc.allocate(new_cap);
