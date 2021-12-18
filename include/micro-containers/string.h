@@ -315,16 +315,29 @@ namespace microc {
         basic_string& operator+=(const basic_string & str) {
             reserve(size() + str.size());
             for (const auto & item : str) push_back(item);
+            return *this;
         }
-        basic_string& operator+=(CharT ch) { reserve(size() + 1); push_back(ch);}
+        basic_string& operator+=(CharT ch) { reserve(size() + 1); push_back(ch); return *this;}
         basic_string& operator+=(const CharT* s) {
             auto len = traits_type::length(s);
+            const CharT* s_tag=s;
+            auto old_begin = begin();
+            auto old_end = end();
             reserve(size() + len);
-            for (; len ; --len) { push_back(*(s++)); }
+            {
+                if(s>=old_begin and s<=old_end) { // belongs to me
+                    // might have changed pointer because of reserve, so recalculate
+                    auto delta = s-old_begin;
+                    s_tag = begin()+delta;
+                }
+            }
+            for (; len ; --len) { push_back(*(s_tag++)); }
+            return *this;
         }
         template<class Iterable> basic_string& operator+=(const Iterable & other) {
             reserve(size() + other.size());
             for (const auto & item : other) push_back(item);
+            return *this;
         }
 
         void push_back(const CharT & v) noexcept { internal_push_back(v); }
@@ -441,7 +454,7 @@ namespace microc {
         iterator erase(const_iterator first, const_iterator last) {
             difference_type last_index = last-begin();
             difference_type how_many_to_erase = last-first;
-            const_iterator * dummy;
+            const_iterator dummy;
             replace<const_iterator>(first, last, dummy, dummy);
             return begin() + last_index - how_many_to_erase;
         }
@@ -505,22 +518,6 @@ namespace microc {
             write_null_termination_at_end();
             return *this;
         }
-//        template<class InputIt> basic_string& replace(const_iterator first, const_iterator last,
-//                                                      InputIt first2, InputIt last2) {
-//            auto count = last-first;
-//            auto count2 = last2-first2;
-//            auto pos = first-begin();
-//            if(count>size()-pos) count = size()-pos;
-//            const bool is_expending = count2 > count;
-//            if(is_expending) reserve(size() + count2 - count);
-//            traits_type::move(_data+pos+count2, _data+pos+count, size()-pos-count);
-//            for (;count2; --count2, ++_current, ++first2) {
-//                traits_type::assign(*(_data+pos++), *first2);
-//            }
-//            _current -= count;
-//            write_null_termination_at_end();
-//            return *this;
-//        }
 
         /////
         // query/search operations

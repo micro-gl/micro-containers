@@ -24,6 +24,7 @@ namespace microc {
         bool operator()(const T& a, const T& b) const{ return a==b; }
     };
 
+    // Heap methods
     inline microc::size_t __heap_parent_of(microc::size_t i) { return (i-1)>>1; }
     inline microc::size_t __heap_left_child_of(microc::size_t i) { return (i<<1)|1; }
     inline microc::size_t __heap_right_child_of(microc::size_t i) { return (i<<1)+2; }
@@ -156,5 +157,27 @@ namespace microc {
     void sort_heap(RandomIt first, RandomIt last) {
         using Compare=microc::less<microc::traits::remove_const_and_reference_t<decltype(*first)>>;
         microc::sort_heap<RandomIt, Compare>(first, last, Compare());
+    }
+
+    // Find iterator
+    template<class InputIt, class T>
+    InputIt find(InputIt first, InputIt last, const T& value) {
+        for (; first != last; ++first)
+            if (*first == value) { return first; }
+        return last;
+    }
+
+    template<class InputIt, class UnaryPredicate>
+    InputIt find_if(InputIt first, InputIt last, UnaryPredicate p) {
+        for (; first != last; ++first)
+            if (p(*first)) { return first; }
+        return last;
+    }
+
+    template<class InputIt, class UnaryPredicate>
+    InputIt find_if_not(InputIt first, InputIt last, UnaryPredicate q) {
+        for (; first != last; ++first)
+            if (!q(*first)) { return first; }
+        return last;
     }
 }
