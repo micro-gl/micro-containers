@@ -43,14 +43,13 @@ namespace microc {
             return r;
         }
         static char_type* copy(char_type* dest, const char_type* src, microc::size_t count) {
-            char_type* r = src;
             for(microc::size_t ix = 0; ix < count; ++ix) { assign(*(dest++), *(src++)); }
-            return r;
+            return dest;
         }
         static int compare(const char_type* s1, const char_type* s2, std::size_t count) {
-            for(microc::size_t ix = 0; ix < count; ++ix) {
-                if(lt(*(s1++), *(s2++))) return -1;
-                if(lt(*(s2++), *(s1++))) return 1;
+            for(microc::size_t ix = 0; ix < count; ++ix, s1++, s2++) {
+                if(lt(*s1, *s2)) return -1;
+                if(lt(*s2, *s1)) return 1;
             }
             return 0;
         }
@@ -97,7 +96,7 @@ namespace microc {
         using iterator = pointer;
         using const_iterator = const_pointer;
         static const size_type npos = ~size_type(0);
-
+        struct out_of_bounds_exception {};
 #define minnnn(a,b) ((a)<(b) ? (a) : (b))
     private:
         using rebind_allocator_type = typename allocator_type::template rebind<value_type>::other;
@@ -125,7 +124,7 @@ namespace microc {
         }
         basic_string(const basic_string& other, size_type pos, size_type count,
                      const Allocator& alloc = Allocator()) : basic_string(alloc) {
-            count = pos+count > other.size() ? other.size()-pos : count;
+            count = minnnn(count, other.size()-pos);
             reserve(count);
             for (; count; --count) push_back(other[pos++]);
         }
@@ -211,12 +210,14 @@ namespace microc {
             const auto len = traits_type::length(s);
             clear(); reserve(len);
             for (size_type ix = 0; ix < len; ++ix) push_back(s[ix]);
+            return *this;
         }
-        basic_string& operator=(CharT ch) { clear(); reserve(2); push_back(ch); }
+        basic_string& operator=(CharT ch) { clear(); reserve(2); push_back(ch);  return *this; }
         template<class Iterable>
         basic_string& operator=(const Iterable & other) {
             clear(); reserve(other.size());
             for (const auto & item : other) push_back(item);
+            return *this;
         }
 
         // Element access
@@ -241,6 +242,7 @@ namespace microc {
         // Capacity
         bool empty() noexcept { return _current==0; }
         size_type size() const noexcept { return _current; }
+        size_type length() const noexcept { return _current; }
         size_type capacity() const noexcept { return _cap; }
         void shrink_to_fit() { re_alloc_to(size()); }
         void reserve(size_type new_cap) {
@@ -464,13 +466,14 @@ namespace microc {
 
         basic_string substr(size_type pos = 0, size_type count = npos) const {
             if(pos>size()) throw_out_of_bounds_exception_if_can();
-            if(pos+count>size()) count=size()-pos;
+            count = minnnn(count, size()-pos);
             return basic_string(*this, pos, count, _alloc);
         }
         size_type copy(CharT* dest, size_type count, size_type pos = 0) const {
             if(pos>size()) throw_out_of_bounds_exception_if_can();
-            if(pos+count>size()) count=size()-pos;
+            count = minnnn(count, size()-pos);
             for(; count; --count) { traits_type::copy(dest, _data + pos, count); }
+            return count;
         }
 
         // replace
@@ -486,7 +489,7 @@ namespace microc {
         basic_string& replace(size_type pos, size_type count, const CharT* cstr, size_type count2)
         { return replace(begin()+pos, begin()+pos + count, cstr, cstr+count2); }
         basic_string& replace(size_type pos, size_type count, const CharT* cstr)
-        { return replace(begin()+pos, begin()+pos+count, cstr, traits_type::length(cstr)); }
+        { return replace(begin()+pos, begin()+pos+count, cstr, cstr + traits_type::length(cstr)); }
         basic_string& replace(const_iterator first, const_iterator last, const CharT* cstr)
         { return replace(first, last, cstr, traits_type::length(cstr)); }
         basic_string& replace(const_iterator first, const_iterator last, size_type count2, CharT ch) {
@@ -544,7 +547,8 @@ namespace microc {
         size_type rfind(const CharT* s, size_type pos, size_type count) const {
             // Finds the last substring equal to the range [s, s+count) in [_data+0, _data+pos]
             if(count==0 or count>size()) return npos;
-            if(pos+count>size()) pos = size()-count;
+            pos = minnnn(pos, size()-1);
+//            if(pos+count>size()) pos = size()-count;
             auto counter = count;
             for (size_type ix = pos+1; ix; --ix, counter=count) {
                 for (size_type jx = 0; jx < count ; ++jx) {
@@ -556,20 +560,28 @@ namespace microc {
             }
             return npos;
         }
-        size_type rfind(const basic_string& str, size_type pos = 0) const noexcept
+        size_type rfind(const basic_string& str, size_type pos = npos) const noexcept
         { return rfind(str.data(), pos, str.size()); }
-        size_type rfind(const CharT* s, size_type pos = 0) const
+        size_type rfind(const CharT* s, size_type pos = npos) const
         { return rfind(s, pos, traits_type::length(s)); }
-        size_type rfind(CharT ch, size_type pos = 0) const { return rfind(&ch, pos, 1); }
+        size_type rfind(CharT ch, size_type pos = npos) const { return rfind(&ch, pos, 1); }
 
+        bool contains(const basic_string & str) const { return find(str, 0) != npos; }
         bool contains(const CharT* s) const { return find(s) != npos; }
         bool contains(CharT c) const noexcept { return find(c) != npos; }
 
         bool starts_with(CharT c) const noexcept { return find(c)==0; }
         bool starts_with(const CharT* s) const { return find(s)==0; }
+        bool starts_with(const basic_string & str) const { return find(str, 0)==0; }
+        bool ends_with(const basic_string & str) const {
+            if(str.size()>size()) return false;
+            const auto pos = size()-str.size();
+            return find(str, pos)==pos;
+        }
         bool ends_with(CharT c) const noexcept { return find(c, size()-1)==size()-1; }
         bool ends_with(const CharT* s) const {
             const auto str_len = traits_type::length(s);
+            if(str_len>size()) return false;
             return find(s, size()-str_len, str_len)==size()-str_len;
         }
 
@@ -596,8 +608,7 @@ namespace microc {
             auto len = traits_type::length(s);
             return compare(0, len, s, len);
         }
-        int compare(size_type pos1, size_type count1,
-                    const basic_string& str,
+        int compare(size_type pos1, size_type count1, const basic_string& str,
                     size_type pos2, size_type count2 = npos ) const {
             count2 = minnnn(count2, str.size()-pos2);
             return compare(pos1, count1, str.data()+pos2, count2);
@@ -610,7 +621,7 @@ namespace microc {
         size_type find_first_of(const CharT* s, size_type pos, size_type count) const {
             for(size_type ix = pos; ix < size(); ++ix)
                 for(size_type jx = 0; jx < count; ++jx)
-                    if(eq(*(_data+ix), *(s+jx))) return (_data+ix);
+                    if(traits_type::eq(*(_data+ix), *(s+jx))) return ix;
             return npos;
         }
         size_type find_first_of(const CharT* s, size_type pos = 0) const
@@ -624,7 +635,7 @@ namespace microc {
             pos=minnnn(pos, size()-1);
             for(size_type ix = pos+1; ix; --ix)
                 for(size_type jx = 0; jx < count; ++jx)
-                    if(eq(*(_data+ix-1), *(s+jx))) return (_data+ix-1);
+                    if(traits_type::eq(*(_data+ix-1), *(s+jx))) return (ix-1);
             return npos;
         }
         size_type find_last_of(const CharT* s, size_type pos = npos) const
@@ -638,7 +649,7 @@ namespace microc {
             for(size_type ix = pos; ix < size(); ++ix) {
                 bool found = true;
                 for (size_type jx = 0; jx < count; ++jx)
-                    if (eq(*(_data + ix), *(s + jx))) {
+                    if (traits_type::eq(*(_data + ix), *(s + jx))) {
                         found=false;break;
                     }
                 if(found) return ix;
@@ -653,21 +664,25 @@ namespace microc {
         { return find_first_not_of(&ch, pos, 1); }
         // find_last_not_of
         size_type find_last_not_of(const CharT* s, size_type pos, size_type count) const {
+            // Finds the last character equal to none of the characters in the given character sequence.
+            // The search considers only the interval [0, pos]. If the character is not present in
+            // the interval, npos will be returned.
+            pos = minnnn(pos, size()-1);
             for(size_type ix = pos+1; ix; --ix) {
                 bool found = true;
                 for (size_type jx = 0; jx < count; ++jx)
-                    if (eq(*(_data + ix-1), *(s + jx))) {
+                    if (traits_type::eq(*(_data + ix-1), *(s + jx))) {
                         found=false;break;
                     }
                 if(found) return ix-1;
             }
             return npos;
         }
-        size_type find_last_not_of(const CharT* s, size_type pos = 0) const
+        size_type find_last_not_of(const CharT* s, size_type pos = npos) const
         { return find_last_not_of(s, pos, traits_type::length(s)); }
-        size_type find_last_not_of(const basic_string& str, size_type pos = 0) const
+        size_type find_last_not_of(const basic_string& str, size_type pos = npos) const
         { return find_last_not_of(str.data(), pos, str.size()); }
-        size_type find_last_not_of(CharT ch, size_type pos = 0) const
+        size_type find_last_not_of(CharT ch, size_type pos = npos) const
         { return find_last_not_of(&ch, pos, 1); }
 
         // Iterators

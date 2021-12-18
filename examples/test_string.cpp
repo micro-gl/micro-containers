@@ -1,3 +1,4 @@
+#define MICRO_CONTAINERS_ENABLE_THROW
 #include "src/test_utils.h"
 #include <micro-containers/string.h>
 #include <micro-containers/algorithm.h>
@@ -132,14 +133,371 @@ void test_operator_plus_assign() {
     std::cout << "- s+=s; s= " << s.c_str() << std::endl;
 }
 
+void test_substr() {
+    print_test_header("test_substr");
+
+    string a = "0123456789abcdefghij";
+
+    std::cout << "- a= " << a.c_str() << std::endl;
+
+    // count is npos, returns [pos, size())
+    string sub1 = a.substr(10);
+    std::cout << "- sub1= " << sub1.c_str() << '\n';
+
+    // both pos and pos+count are within bounds, returns [pos, pos+count)
+    string sub2 = a.substr(5, 3);
+    std::cout << "- sub2 = a.substr(5, 3); sub2= " << sub2.c_str() << '\n';
+
+    // pos is within bounds, pos+count is not, returns [pos, size())
+    string sub4 = a.substr(a.size()-3, 50);
+    std::cout << "- sub4 = a.substr(a.size()-3, 50); sub4= " << sub4.c_str() << '\n';
+    // this is effectively equivalent to
+    // std::string sub4 = a.substr(17, 3);
+    // since a.size() == 20, pos == a.size()-3 == 17, and a.size()-pos == 3
+
+    try {
+        // pos is out of bounds, throws
+        string sub5 = a.substr(a.size()+3, 50);
+        std::cout << sub5.c_str() << '\n';
+    } catch(string::out_of_bounds_exception) {
+        std::cout << "pos exceeds string size\n";
+    }
+}
+
+void test_copy() {
+    print_test_header("test_copy");
+
+    string foo("quuuux");
+    char bar[7]{};
+    foo.copy(bar, sizeof bar);
+    std::cout << "- foo= " << foo.c_str() << '\n';
+    std::cout << "- bar= " << bar << '\n';
+}
+
+void test_resize() {
+    print_test_header("test_resize");
+
+    const unsigned  desired_length{ 8 };
+    string     long_string( "Where is the end?" );
+    string     short_string( "Ha" );
+
+    std::cout << "Basic functionality:\n"
+              << "Shorten:\n"
+              << "1. Before: " << long_string.c_str() << '\n';
+
+    long_string.resize( desired_length );
+
+    std::cout << "2. After:  " << long_string.c_str() << '\n';
+
+    std::cout << "Lengthen:\n"
+              << "3. Before: " << short_string.c_str() << '\n';
+
+    short_string.resize( desired_length, 'a' );
+
+    std::cout << "4. After:  " << short_string.c_str() <<  "\n\n";
+}
+
+void test_compare() {
+    print_test_header("test_compare");
+
+    // 1) Compare with other string
+    {
+        int compare_value{
+                string{"Batman"}.compare(string{"Superman"})
+        };
+        std::cout << (
+                compare_value < 0 ? "Batman comes before Superman\n" :
+                compare_value > 0 ? "Superman comes before Batman\n" :
+                "Superman and Batman are the same.\n"
+        );
+    }
+
+    // 2) Compare substring with other string
+    {
+        int compare_value{
+                string{"Batman"}.compare(3, 3, string{"Superman"})
+        };
+        std::cout << (
+                compare_value < 0 ? "man comes before Superman\n" :
+                compare_value > 0 ? "Superman comes before man\n" :
+                "man and Superman are the same.\n"
+        );
+    }
+
+    // 3) Compare substring with other substring
+    {
+        string a{"Batman"};
+        string b{"Superman"};
+
+        int compare_value{a.compare(3, 3, b, 5, 3)};
+
+        std::cout << (
+                compare_value < 0 ? "man comes before man\n" :
+                compare_value > 0 ? "man comes before man\n" :
+                "man and man are the same.\n"
+        );
+        // Compare substring with other substring
+        // defaulting to end of other string
+        assert(compare_value == a.compare(3, 3, b, 5));
+    }
+
+    // 4) Compare with char pointer
+    {
+        int compare_value{string{"Batman"}.compare("Superman")};
+
+        std::cout << (
+                compare_value < 0 ? "Batman comes before Superman\n" :
+                compare_value > 0 ? "Superman comes before Batman\n" :
+                "Superman and Batman are the same.\n"
+        );
+    }
+
+    // 5) Compare substring with char pointer
+    {
+        int compare_value{string{"Batman"}.compare(3, 3, "Superman")};
+
+        std::cout << (
+                compare_value < 0 ? "man comes before Superman\n" :
+                compare_value > 0 ? "Superman comes before man\n" :
+                "man and Superman are the same.\n"
+        );
+    }
+
+    // 6) Compare substring with char pointer substring
+    {
+        int compare_value{string{"Batman"}.compare(0, 3, "Superman", 5)};
+
+        std::cout << (
+                compare_value < 0 ? "Bat comes before Super\n" :
+                compare_value > 0 ? "Super comes before Bat\n" :
+                "Super and Bat are the same.\n"
+        );
+    }
+}
+
+void test_starts_with() {
+    print_test_header("test_starts_with");
+
+    auto s = string("hello world");
+    string prefix = "hello";
+    std::cout << '\'' << s.c_str() << "' starts with '" << prefix.c_str() << "': " <<
+              s.starts_with(prefix) << '\n';
+    prefix = "goodbye";
+    std::cout << '\'' << s.c_str() << "' starts with '" << prefix.c_str() << "': " <<
+              s.starts_with(prefix.c_str()) << '\n';
+    std::cout << '\'' << s.c_str() << "' starts with char '" << 'h' << "': " <<
+              s.starts_with('h') << '\n';
+    std::cout << '\'' << s.c_str() << "' starts with char '" << 'x' << "': " <<
+              s.starts_with('x') << '\n';
+}
+
+void test_ends_with() {
+    print_test_header("test_ends_with");
+
+    auto s = string("hello world");
+    string prefix = "world";
+    std::cout << '\'' << s.c_str() << "' ends with '" << prefix.c_str() << "': " <<
+              s.ends_with(prefix) << '\n';
+    prefix = "goodbye";
+    std::cout << '\'' << s.c_str() << "' ends with '" << prefix.c_str() << "': " <<
+              s.ends_with(prefix.c_str()) << '\n';
+    std::cout << '\'' << s.c_str() << "' ends with char '" << 'd' << "': " <<
+              s.ends_with('d') << '\n';
+    std::cout << '\'' << s.c_str() << "' ends with char '" << 'x' << "': " <<
+              s.ends_with('x') << '\n';
+}
+
+void test_contains() {
+    print_test_header("test_contains");
+
+    auto s = string("hello world");
+    string prefix = "hello";
+    std::cout << '\'' << s.c_str() << "' contains '" << prefix.c_str() << "': " <<
+              s.contains(prefix) << '\n';
+    prefix = "goodbye";
+    std::cout << '\'' << s.c_str() << "' contains '" << prefix.c_str() << "': " <<
+              s.contains(prefix.c_str()) << '\n';
+    prefix = "llo w";
+    std::cout << '\'' << s.c_str() << "' contains '" << prefix.c_str() << "': " <<
+              s.contains(prefix.c_str()) << '\n';
+    prefix = s;
+    std::cout << '\'' << s.c_str() << "' contains '" << prefix.c_str() << "': " <<
+              s.contains(prefix.c_str()) << '\n';
+    std::cout << '\'' << s.c_str() << "' contains char '" << 'd' << "': " <<
+              s.contains('d') << '\n';
+    std::cout << '\'' << s.c_str() << "' contains char '" << 'x' << "': " <<
+              s.contains('x') << '\n';
+}
+
+void test_find() {
+    print_test_header("test_find");
+
+    const auto print = [](string::size_type n, string const &s) {
+        if (n == string::npos) std::cout << "not found\n";
+        else std::cout << "found: \"" << s.substr(n).c_str() << '\n';
+    };
+
+    string::size_type n;
+    string const s = "This is a string";
+    std::cout << "- " << s.c_str() << std::endl;
+
+    // search from beginning of string
+    n = s.find("is");
+    print(n, s);
+
+    // search from position 5
+    n = s.find("is", 5);
+    print(n, s);
+
+    // find a single character
+    n = s.find('a');
+    print(n, s);
+
+    // find a single character
+    n = s.find('q');
+    print(n, s);
+}
+
+void test_rfind() {
+    print_test_header("test_rfind");
+
+    const auto print = [](string::size_type n, string const &s) {
+        if (n == string::npos) std::cout << "not found\n";
+        else std::cout << "found: \"" << s.substr(n).c_str() << "\" at " << n << '\n';
+    };
+
+    string::size_type n;
+    string const s = "This is a string";
+    std::cout << "- " << s.c_str() << std::endl;
+
+    // search from beginning of string
+    n = s.rfind("is");
+    print(n, s);
+
+    // search from position 4
+    n = s.rfind("is", 4);
+    print(n, s);
+
+    // find a single character
+    n = s.rfind('s');
+    print(n, s);
+
+    // find a single character
+    n = s.rfind('q');
+    print(n, s);
+}
+
+void test_find_first_of() {
+    print_test_header("test_find_first_of");
+
+    // the test string
+    string str = string("Hello World!");
+
+    // strings and chars to search for
+    string search_str = string("o");
+    const char* search_cstr = "Good Bye!";
+
+    std::cout << str.find_first_of(search_str) << '\n';
+    std::cout << str.find_first_of(search_str, 5) << '\n';
+    std::cout << str.find_first_of(search_cstr) << '\n';
+    std::cout << str.find_first_of(search_cstr, 0, 4) << '\n';
+    // 'x' is not in "Hello World', thus it will return std::string::npos
+    std::cout << str.find_first_of('x') << '\n';
+}
+
+void test_find_last_of() {
+    print_test_header("test_find_last_of");
+
+    const string path="/root/config";
+    auto const pos=path.find_last_of('/');
+    const auto leaf=path.substr(pos+1);
+
+    std::cout << leaf.c_str() << '\n';
+}
+
+void test_find_first_not_of() {
+    print_test_header("test_find_first_not_of");
+
+    string to_search = "Some data with %MACROS to substitute";
+
+    std::cout << "Before: " << to_search.c_str() << '\n';
+
+    auto pos = string::npos;
+    while ((pos = to_search.find('%')) != string::npos) {
+        // Permit uppercase letters, lowercase letters and numbers in macro names
+        const auto after = to_search.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                                       "abcdefghijklmnopqrstuvwxyz"
+                                                       "0123456789", pos + 1);
+
+        // Now to_search[pos] == '%' and to_search[after] == ' ' (after the 'S')
+
+        if(after != string::npos)
+            to_search.replace(pos, after - pos, "some very nice macros");
+    }
+
+    std::cout << "After: " << to_search.c_str() << '\n';
+
+}
+
+void test_find_last_not_of() {
+    print_test_header("test_find_last_not_of");
+
+    const auto show_pos = [](const string& str, string::size_type found) {
+        if (found != string::npos) std::cout << "[" << found << "] = \'" << str[found] << "\'\n";
+        else std::cout << "not found" "\n";
+    };
+
+    string str { "abc_123" };
+    char const* skip_set { "0123456789" };
+    string::size_type str_last_pos { string::npos };
+
+    show_pos(str, str.find_last_not_of(skip_set)); // [3] = '_'
+
+    str_last_pos = 2;
+    show_pos(str, str.find_last_not_of(skip_set, str_last_pos)); // [2] = 'c'
+
+    str_last_pos = 2;
+    show_pos(str, str.find_last_not_of('c', str_last_pos)); // [1] = 'b'
+
+    const char arr[] { '3','4','5' };
+    show_pos(str, str.find_last_not_of(arr)); // [5] = '2'
+
+    str_last_pos = 2;
+    std::string::size_type skip_set_size { 4 };
+    show_pos(str, str.find_last_not_of(skip_set,
+                                       str_last_pos,
+                                       skip_set_size)); // [2] = 'c'
+
+    show_pos(str, str.find_last_not_of("abc")); // [6] = '3'
+
+    str_last_pos = 2;
+    show_pos(str, str.find_last_not_of("abc", str_last_pos)); // not found
+}
+
 int main() {
     // Operations
 //    test_clear();
-//    test_replace();
 //    test_insert();
 //    test_erase();
 //    test_push_pop_back();
-    test_operator_plus_assign();
+//    test_operator_plus_assign();
+//    test_replace();
+//    test_substr();
+//    test_copy();
+//    test_resize();
+
+    // Search / Queries
+//    test_compare();
+//    test_starts_with();
+//    test_ends_with();
+//    test_contains();
+//    test_find();
+//    test_rfind();
+//    test_find_first_of();
+//    test_find_last_of();
+//    test_find_first_not_of();
+    test_find_last_not_of();
+
 
 //    test_erase();
 //    test_resize();
