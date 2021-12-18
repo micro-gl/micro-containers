@@ -2,115 +2,97 @@
 #include <micro-containers/string.h>
 
 using namespace microc;
+#include <string>
+using string = basic_string<char, char_traits<char>>;
+
+void print_string(const string & str) {
+    std::cout << str.c_str() << std::endl;
+}
+
+void test_replace() {
+    print_test_header("test_replace");
+
+    std::string a1 = "tomer tomer tomer";
+    std::string a2 = "ABC";
+    a2.replace(1, 10, a1);
+
+    string a1_ = "tomer tomer tomer";
+    string a2_ = "ABC";
+    a1_.replace(0, 10, a2_.c_str(), a2_.size());
+    std::cout << a1_.c_str() << std::endl;
+
+    string a1_1 = "tomer tomer tomer";
+    string a2_1 = "ABC";
+    a1_1.replace(5, 1, a2_1.c_str(), a2_1.size());
+    std::cout << a1_1.c_str() << std::endl;
+
+    string a1_2 = "tomer tomer tomer";
+    string a2_3 = "ABC";
+    a1_2.replace(a1_2.begin(), a1_2.end() - 5, 5, 'A');
+    std::cout << a1_2.c_str() << std::endl;
+}
 
 void test_insert() {
     print_test_header("test_insert");
 
-    using c = dynamic_array<int>;
-    c vec(3, 100);
-    std::cout << "\n- vec(3, 100) \n";
-    print_simple_container(vec);
+    std::string a1 = "tomer tomer tomer";
+    std::string a2 = "ABC";
+    a2.replace(1, 10, a1);
 
-    auto it = vec.begin();
-    it = vec.insert(it, 200);
-    std::cout << "\n- vec.insert(it, 200) \n";
-    print_simple_container(vec);
+    string s = "tomer tomer tomer";
+    string s2 = "ABC";
+    std::cout << "- s= " << s.c_str() << std::endl;
+    std::cout << "- s2= " << s2.c_str() << std::endl;
 
-    vec.insert(it, 2, 300);
-    std::cout << "\n- vec.insert(it, 2, 300) \n";
-    print_simple_container(vec);
+    s.insert(s.begin(), s2.begin(), s2.end());
+    std::cout << "- s.insert(s.begin(), s2.begin(), s2.end()), s= " << s.c_str() << std::endl;
 
-    // "it" no longer valid, get a new one:
-    it = vec.begin();
+    s.insert(s.begin()+3, s2.begin(), s2.end());
+    std::cout << "- s.insert(s.begin()+3, s2.begin(), s2.end()), s= " << s.c_str() << std::endl;
 
-    c vec2(2, 400);
-    vec.insert(it+2, vec2.begin(), vec2.end());
-    std::cout << "\n- vec.insert(it+2, vec2.begin(), vec2.end()) \n";
-    print_simple_container(vec);
+    s.insert(s.end(), s2.begin(), s2.end());
+    std::cout << "- s.insert(s.end(), s2.begin(), s2.end()), s= " << s.c_str() << std::endl;
 
-    int arr[] = { 501,502,503 };
-    vec.insert(vec.begin(), arr, arr+3);
-    std::cout << "\n- int arr[] = { 501,502,503 }";
-    std::cout << "\n- vec.insert(vec.begin(), arr, arr+3) \n";
-    print_simple_container(vec);
+    s.insert(0, s);
+    std::cout << "- s.insert(0, s), s= " << s.c_str() << std::endl;
+
+    s.insert(0, s.data(), 6);
+    std::cout << "- s.insert(0, s.data(), 6), s= " << s.c_str() << std::endl;
+
+    string s_temp = s.insert(0, 3, '=');
+    std::cout << "- s.insert(0, s.data(), 6), s= " << s.c_str() << std::endl;
+
+    //
+//    a1_.replace(0, 10, a2_.c_str(), a2_.size());
+//    std::cout << a1_.c_str() << std::endl;
+//
+//    string a1_1 = "tomer tomer tomer";
+//    string a2_1 = "ABC";
+//    a1_1.replace(5, 1, a2_1.c_str(), a2_1.size());
+//    std::cout << a1_1.c_str() << std::endl;
+//
+//    string a1_2 = "tomer tomer tomer";
+//    string a2_3 = "ABC";
+//    a1_2.replace(a1_2.begin(), a1_2.end() - 5, 5, 'A');
+//    std::cout << a1_2.c_str() << std::endl;
 }
 
-void test_erase() {
-    print_test_header("test_erase");
+void test_clear() {
+    print_test_header("test_clear");
 
-    using container = dynamic_array<int>;
-
-    int aa[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    container c;
-    for (int ix = 0; ix < 10; ++ix) c.push_back(ix);
-
-    std::cout << "- c is:  \n";
-    print_simple_container(c);
-
-    c.erase(c.begin());
-    std::cout << "\n- c.erase(c.begin()) \n";
-    print_simple_container(c);
-
-    c.erase(c.begin()+2, c.begin()+5);
-    std::cout << "\n- c.erase(c.begin()+2, c.begin()+5) \n";
-    print_simple_container(c);
-
-    // Erase all even numbers (C++11 and later)
-    for (auto it = c.begin(); it != c.end(); ) {
-        if (*it % 2 == 0) {
-            it = c.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    std::cout << "\n- Erase all even numbers \n";
-    print_simple_container(c);
-
-    c.erase(c.end()-1);
-    std::cout << "\n- c.erase(c.end()-1) \n";
-    print_simple_container(c);
-
-    c.erase(c.begin(), c.end());
-    std::cout << "\n- c.erase(c.begin(), c.end()) \n";
-    print_simple_container(c);
-
+    string s = "tomer tomer tomer";
+    std::cout << "- s= " << s.c_str() << std::endl;
+    s.clear();
+    std::cout << "- s.clear(), s= " << s.c_str() << std::endl;
+    assert(s.empty() && "s is not empty");
 }
-
-void test_resize() {
-    print_test_header("test_resize");
-
-    using container = dynamic_array<int>;
-    int a[] = {1, 2, 3};
-    container c;
-    c.push_back(1);
-    c.push_back(2);
-    c.push_back(3);
-
-    std::cout << "- The vector holds: \n";
-    print_simple_container(c);
-    std::cout << '\n';
-    c.resize(5);
-    std::cout << "- After resize up to 5: \n";
-    print_simple_container(c);
-    std::cout << '\n';
-    c.resize(2);
-    std::cout << "- After resize down to 2: \n";
-    print_simple_container(c);
-    std::cout << '\n';
-    c.resize(6, 4);
-    std::cout << "- After resize up to 6 (rvalue initializer = 4): \n";
-    print_simple_container(c);
-    int lvalue = 5;
-    c.resize(8, lvalue);
-    std::cout << "- After resize up to 8 (lvalue initializer = 5): \n";
-    print_simple_container(c);
-    std::cout << '\n';
-}
-
 
 int main() {
-    // modifiers
+    // Operations
+//    test_clear();
+//    test_replace();
     test_insert();
+
 //    test_erase();
 //    test_resize();
 }

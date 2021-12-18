@@ -11,7 +11,6 @@
 #pragma once
 
 #include "traits.h"
-#include <string>
 
 namespace microc {
 
@@ -34,17 +33,19 @@ namespace microc {
         static bool lt(char_type a, char_type b) { return a<b; }
         static char_type* move(char_type* dest, const char_type* src, microc::size_t count) {
             if (count == 0) return dest;
-            char_type* __r = dest;
+            char_type* r = dest;
             if (dest < src) {
                 for (; count; --count, ++dest, ++src) assign(*dest, *src);
             } else if (src < dest) {
                 dest += count; src += count;
                 for (; count; --count) assign(*--dest, *--src);
             }
-            return __r;
+            return r;
         }
         static char_type* copy(char_type* dest, const char_type* src, microc::size_t count) {
+            char_type* r = src;
             for(microc::size_t ix = 0; ix < count; ++ix) { assign(*(dest++), *(src++)); }
+            return r;
         }
         static int compare(const char_type* s1, const char_type* s2, std::size_t count) {
             for(microc::size_t ix = 0; ix < count; ++ix) {
@@ -59,9 +60,8 @@ namespace microc {
             return count;
         }
         static const char_type* find(const char_type* p, microc::size_t count, const char_type& ch) {
-            for(microc::size_t ix = 0; ix < count; ++ix, ++p) {
+            for(microc::size_t ix = 0; ix < count; ++ix, ++p)
                 if(eq(*p, ch)) return p;
-            }
         }
         static char_type to_char_type(int_type c) { return char_type(c); }
         static int_type to_int_type(char_type c) { return int_type(c); }
@@ -98,9 +98,10 @@ namespace microc {
         using const_iterator = const_pointer;
         static const size_type npos = ~size_type(0);
 
+#define minnnn(a,b) ((a)<(b) ? (a) : (b))
     private:
         using rebind_allocator_type = typename allocator_type::template rebind<value_type>::other;
-        void throw_out_of_bounds_exception_if_can() {
+        void throw_out_of_bounds_exception_if_can() const {
 #ifdef MICRO_CONTAINERS_ENABLE_THROW
             throw out_of_bounds_exception();
 #endif
@@ -110,7 +111,7 @@ namespace microc {
         rebind_allocator_type _alloc;
         size_type _cap;
         size_type _current;
-        static const CharT _null_char = 0;
+        static CharT _null_char;
 
     public:
         // ctors
@@ -245,14 +246,6 @@ namespace microc {
         void reserve(size_type new_cap) {
             if(new_cap <= capacity()) return;
             re_alloc_to(new_cap);
-//            CharT * _new_data = _alloc.allocate(new_cap);
-//            // move-construct old objects
-//            for (size_type ix = 0; ix < size(); ++ix)
-//                ::new (_new_data + ix, microc_new::blah) CharT(microc::traits::move(_data[ix]));
-//            _cap = new_cap;
-//            // no need to destruct because the items were moved
-//            if(_data) _alloc.deallocate(_data);
-//            _data = _new_data;
         }
 
         // Modifiers
@@ -267,25 +260,31 @@ namespace microc {
             if(new_capacity>0) new_capacity+=1;
             // re-alloc to another capacity and move old elements
             const auto old_size = _current;
-            const auto copy_size = old_size < new_capacity ? old_size : new_capacity;
+            const auto copy_size = old_size < new_capacity ? old_size : new_capacity-1;
 
             CharT * _new_data = nullptr;
-            if(new_capacity) _new_data = _alloc.allocate(new_capacity);
-            // move all previous objects into new location,
-            // therefore we do not need to destruct because we move from same allocator
-            if(copy_size) {
-                for (size_type ix = 0; ix < copy_size; ++ix) // including null terminator
-                    ::new (_new_data + ix, microc_new::blah) CharT(microc::traits::move(_data[ix]));
-                // add null termination char
-                const auto _end = old_size < new_capacity ? old_size : (new_capacity-1);
-                traits_type::assign(*(_new_data+_end), value_type());
+            if(new_capacity) {
+                _new_data = _alloc.allocate(new_capacity);
+                // move all previous objects into new location,
+                // therefore we do not need to destruct because we move from same allocator
+                if(copy_size) {
+                    for (size_type ix = 0; ix < copy_size; ++ix) // including null terminator
+                        ::new (_new_data + ix, microc_new::blah) CharT(microc::traits::move(_data[ix]));
+                }
+                // add null termination chars between size and capacity in new memory
+                for (int ix = copy_size; ix < new_capacity; ++ix)
+                    ::new (_new_data + ix, microc_new::blah) CharT(0);
             }
-            // de allocate old data
-            if(_data) _alloc.deallocate(_data, capacity());
+            if(_data) { // de allocate old data
+                // destruct suffix items in old memory, that didn't make it to new memory,
+                // This happens when shrinking is happening.
+                for (size_type ix = copy_size; ix < old_size; ++ix) (_data + ix)->~value_type();
+                _alloc.deallocate(_data, capacity());
+            }
             _data = _new_data;
             _cap = new_capacity;
         }
-        void write_null_termination_at_end() { traits_type::assign(*end(), value_type()); }
+        void write_null_termination_at_end() { traits_type::assign(*end(), value_type(0)); }
         template<class TT> void internal_push_back(TT && v) noexcept {
             if(size() >= capacity()) {
                 // copy the value, edge case if v belongs
@@ -349,8 +348,10 @@ namespace microc {
         }
 
         void clear() noexcept {
-            for (size_type ix = 0; ix < size(); ++ix) _data[ix].~T();
+//            for (size_type ix = 0; ix < size(); ++ix) _data[ix].~value_type();
+            // we assume CharT is non-allocating structure
             _current = 0;
+            write_null_termination_at_end();
         }
 
         void drain() noexcept {
@@ -361,96 +362,88 @@ namespace microc {
 
         // avoid overload resolution if InputIt is integral type, this can conflict with the
         // insert(const_iterator pos, size_type count, const T& value) overload for integral types
-        template<class InputIt, typename bb = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
-        iterator insert(const_iterator pos, InputIt first, InputIt last, bool move=false) {
-            if(pos>end() or pos<begin()) {
-                throw_out_of_bounds_exception_if_can();
-                return end();
-            }
-            if(first==last) return const_cast<iterator>(pos);
-            // insert range before pos
-            const auto dist_to_first = pos-begin();
-            const auto needed_extra_size = last-first;
-            const auto how_many_to_shift_right = end()-pos;
-            const auto how_many_to_construct = end()-pos;
-            const bool requires_expend = size()+needed_extra_size > capacity();
-            if(requires_expend) {
-                re_alloc_to(capacity() + needed_extra_size + 1);
-                // latest pos is no longer valid, memory might have changed
-                pos = begin()+dist_to_first;
-            }
-            auto current_end = end();
-            auto new_end = current_end + needed_extra_size;
-            //
-#define minnnn(a,b) ((a)<(b) ? (a) : (b))
-            const auto how_many_veterans_require_move_construction =
-                    minnnn(how_many_to_shift_right, needed_extra_size);
-            const auto how_many_veterans_require_move_assignment =
-                    how_many_to_shift_right-how_many_veterans_require_move_construction;
-            const auto how_many_range_require_copy_construction =
-                    needed_extra_size-how_many_veterans_require_move_construction;
-#undef minnnn
-            // move-construct at end the last elements, that belong to this
-            for (size_type ix = 0; ix<how_many_veterans_require_move_construction; ++ix) { // count from [N..1]
-                ::new (--new_end, microc_new::blah) CharT(microc::traits::move(*(--current_end)));
-            } // move-assign at end the last elements, that belong to this
-            for (size_type ix = 0; ix<how_many_veterans_require_move_assignment; ++ix) { // count from [N..1]
-                *(--new_end) = microc::traits::move(*(--current_end));
-            }
-            // copy-construct some range elements
-            for (size_type ix = 0; ix<how_many_range_require_copy_construction; ++ix) { // count from [N..1]
-                if(!move) ::new (--new_end, microc_new::blah) CharT(*(--last));
-                else ::new (--new_end, microc_new::blah) CharT(microc::traits::move(*(--last)));
-            }
-            do { // move-or-copy assign remaining items from iterator
-                *(--new_end) = !move ? *(--last) : microc::traits::move(*(--last));
-            } while(last!=first);
-            _current += needed_extra_size;
-            return const_cast<iterator>(pos);
+        template<class InputIt, typename = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
+        iterator insert(const_iterator pos, InputIt first, InputIt last) {
+            auto delta = pos-begin();
+            replace<InputIt>(pos, pos, first, last);
+            return begin() + delta;
         }
-        iterator insert(const_iterator pos, const CharT& value) {
-            if(pos>end() or pos<begin()) {
-                throw_out_of_bounds_exception_if_can();
-                return end();
-            }
-            if(pos==end()) { push_back(value); return end(); }
-            return insert<const_iterator>(pos, &value, (&value)+1);
+        template<>
+        iterator insert<iterator>(const_iterator pos, iterator first, iterator last) {
+            return insert<const_iterator>(pos, const_iterator(first), const_iterator(last));
         }
-        iterator insert(const_iterator pos, CharT && value) {
-            if(pos>end() or pos<begin()) {
-                throw_out_of_bounds_exception_if_can();
-                return end();
-            }
-            if(pos==end()) { push_back(microc::traits::move(value)); return end(); }
-            return insert<const_iterator>(pos, &value, (&value)+1, true);
+        template<>
+        iterator insert<const_iterator>(const_iterator pos, const_iterator first, const_iterator last) {
+            auto delta = pos-begin();
+            if(first>=begin() and last<=end()) { // belongs to me
+                basic_string temp(first, last, _alloc);
+                replace<const_iterator>(pos, pos, temp.begin(), temp.end());
+            } else
+                replace<const_iterator>(pos, pos, first, last);
+            return begin() + delta;
         }
-        iterator insert(const_iterator pos, size_type count, const CharT& value) {
+        iterator insert(const_iterator pos, CharT ch) {
+            auto delta = pos-begin();
             if(pos>end() or pos<begin()) {
                 throw_out_of_bounds_exception_if_can();
                 return end();
             }
-            // this is a very lazy batch insert, correct way it to implement a
-            // range iterator that returns the same value
-            auto last_pos = const_cast<iterator>(pos);
-            for (size_type ix = 0; ix < count; ++ix) {
-                last_pos = insert(last_pos, value);
+            replace<const_iterator>(begin()+pos, begin()+pos, 1, ch);
+            return begin()+delta;
+        }
+        // todo: this is ambigious with the index overload until I make iterator a type
+        iterator insert2(const_iterator pos, size_type count, CharT ch) {
+            auto delta = pos-begin();
+            if(pos>end() or pos<begin()) {
+                throw_out_of_bounds_exception_if_can();
+                return end();
             }
-            return const_cast<iterator>(last_pos-count);
+            replace(pos, pos, count, ch);
+            return begin()+delta;
+        }
+        basic_string& insert(size_type index, const basic_string& str, size_type index_str,
+                             size_type count = npos) {
+            count = minnnn(count, str.size()-index_str);
+            if(str.begin()>=begin() and str.end()<=end()) { // belongs to me
+                basic_string temp = str.substr(index_str, count);
+                insert<const_iterator>(begin()+index, temp.begin(), temp.end());
+            } else
+                insert<const_iterator>(begin()+index, str.begin()+index_str, str.begin()+index_str+count);
+            return *this;
+        }
+        basic_string& insert(size_type index, const basic_string& str) {
+            return insert(index, str, 0, str.size());
+        }
+        basic_string& insert(size_type index, const CharT* s, size_type count) {
+            insert<const_iterator>(begin()+index, s, s+count);
+            return *this;
+        }
+        basic_string& insert(size_type index, const CharT* s) {
+            if(s>=begin() && s<=end()) { // belongs to me
+                basic_string temp(s, traits_type::length(s), _alloc);
+                insert<const_iterator>(begin()+index, temp.begin(), temp.end());
+            } else
+                insert<const_iterator>(begin()+index, s, s+traits_type::length(s));
+            return *this;
+        }
+        basic_string& insert(size_type index, size_type count, CharT ch) {
+            insert2(const_iterator(begin())+index, count, ch);
+            return *this;
         }
 
+        basic_string& erase(size_type index = 0, size_type count = npos) {
+            if(index>size()) throw_out_of_bounds_exception_if_can();
+            count = minnnn(count, size()-index);
+            erase(begin()+index, begin()+index+count);
+            return *this;
+        }
         iterator erase(const_iterator pos) { return erase(pos, pos+1); }
         iterator erase(const_iterator first, const_iterator last) {
-            auto count_to_erase = last-first;
-            auto distance_to_first = first - begin();
-            auto move_to_iter = const_cast<iterator>(first);
-            auto last_copy_1 = const_cast<iterator>(last);
-            while (last_copy_1!=end()) {
-                *(move_to_iter) = microc::traits::move(*last_copy_1);
-                ++last_copy_1; ++move_to_iter;
-            }
-            while(count_to_erase--!=0) pop_back();
-            // pop back might invalidate iterators, so re-invent them
-            return begin()+distance_to_first;
+            difference_type last_index = last-begin();
+            difference_type how_many_to_erase = last-first;
+            const_iterator * dummy;
+            replace<const_iterator>(first, last, dummy, dummy);
+            return begin() + last_index - how_many_to_erase;
         }
 
         void resize(size_type count) { internal_resize(count, CharT()); }
@@ -459,15 +452,79 @@ namespace microc {
         basic_string substr(size_type pos = 0, size_type count = npos) const {
             if(pos>size()) throw_out_of_bounds_exception_if_can();
             if(pos+count>size()) count=size()-pos;
-            return basic_string(_data, pos, count, _alloc);
+            return basic_string(*this, pos, count, _alloc);
         }
         size_type copy(CharT* dest, size_type count, size_type pos = 0) const {
             if(pos>size()) throw_out_of_bounds_exception_if_can();
             if(pos+count>size()) count=size()-pos;
-            for(; count; --count) { *(dest++) = *(_data + pos++); }
+            for(; count; --count) { traits_type::copy(dest, _data + pos, count); }
         }
 
+        // replace
+        basic_string& replace(size_type pos, size_type count, const basic_string& str)
+        { return replace(begin()+pos, begin()+pos+count, str.begin(), str.end()); }
+        basic_string& replace(const_iterator first, const_iterator last, const basic_string& str)
+        { return replace(first, last, str.begin(), str.end()); }
+        basic_string& replace(size_type pos, size_type count, const basic_string& str,
+                              size_type pos2, size_type count2 = npos ) {
+            if(count2>str.size()-pos2) count2=str.size()-pos2;
+            return replace(begin()+pos, begin()+pos+count, str.data()+pos2, str.data()+pos2+count2);
+        }
+        basic_string& replace(size_type pos, size_type count, const CharT* cstr, size_type count2)
+        { return replace(begin()+pos, begin()+pos + count, cstr, cstr+count2); }
+        basic_string& replace(size_type pos, size_type count, const CharT* cstr)
+        { return replace(begin()+pos, begin()+pos+count, cstr, traits_type::length(cstr)); }
+        basic_string& replace(const_iterator first, const_iterator last, const CharT* cstr)
+        { return replace(first, last, cstr, traits_type::length(cstr)); }
+        basic_string& replace(const_iterator first, const_iterator last, size_type count2, CharT ch) {
+            struct iter_single {
+                using dtype = difference_type;
+                CharT * ch; size_type i;
+                iter_single(CharT * ch, size_type index) : ch(ch), i(index) {}
+                iter_single operator++() { return *this; }
+                iter_single operator--() { return *this; }
+                difference_type operator-(const iter_single & o) { return dtype(i) - dtype(o.i); }
+                bool operator!=(const iter_single & o) const { return i!=o.i; }
+                CharT & operator *() { return *ch; }
+            };
+            return replace<iter_single>(first, last, iter_single(&ch, 0),  iter_single(&ch, count2));
+        }
+        template<class InputIt> basic_string& replace(const_iterator first, const_iterator last,
+                                                      InputIt first2, InputIt last2) {
+            auto count = last-first;
+            auto count2 = last2-first2;
+            auto pos = first-begin();
+            count = minnnn(count, size()-pos);
+            const bool is_expending = count2 > count;
+            if(is_expending) reserve(size() + count2 - count);
+            traits_type::move(_data+pos+count2, _data+pos+count, size()-pos-count);
+            for (;count2; --count2, ++_current, ++first2) {
+                traits_type::assign(*(_data+pos++), *first2);
+            }
+            _current -= count;
+            write_null_termination_at_end();
+            return *this;
+        }
+//        template<class InputIt> basic_string& replace(const_iterator first, const_iterator last,
+//                                                      InputIt first2, InputIt last2) {
+//            auto count = last-first;
+//            auto count2 = last2-first2;
+//            auto pos = first-begin();
+//            if(count>size()-pos) count = size()-pos;
+//            const bool is_expending = count2 > count;
+//            if(is_expending) reserve(size() + count2 - count);
+//            traits_type::move(_data+pos+count2, _data+pos+count, size()-pos-count);
+//            for (;count2; --count2, ++_current, ++first2) {
+//                traits_type::assign(*(_data+pos++), *first2);
+//            }
+//            _current -= count;
+//            write_null_termination_at_end();
+//            return *this;
+//        }
+
+        /////
         // query/search operations
+        /////
         size_type find(const CharT* s, size_type pos, size_type count) const {
             // Finds the first substring equal to the range [s, s+count) in [_data+pos, _data+size())
             if((pos+count)>size() or (count==0)) return npos;
@@ -487,6 +544,26 @@ namespace microc {
         size_type find(const CharT* s, size_type pos = 0) const
         { return find(s, pos, traits_type::length(s)); }
         size_type find(CharT ch, size_type pos = 0) const { return find(&ch, pos, 1); }
+        size_type rfind(const CharT* s, size_type pos, size_type count) const {
+            // Finds the last substring equal to the range [s, s+count) in [_data+0, _data+pos]
+            if(count==0 or count>size()) return npos;
+            if(pos+count>size()) pos = size()-count;
+            auto counter = count;
+            for (size_type ix = pos+1; ix; --ix, counter=count) {
+                for (size_type jx = 0; jx < count ; ++jx) {
+                    const auto & a = *(_data + (ix-1) + jx);
+                    const auto & b = *(s + jx);
+                    counter -= traits_type::eq(a, b) ? 1 : 0;
+                }
+                if(counter==0) return ix-1;
+            }
+            return npos;
+        }
+        size_type rfind(const basic_string& str, size_type pos = 0) const noexcept
+        { return rfind(str.data(), pos, str.size()); }
+        size_type rfind(const CharT* s, size_type pos = 0) const
+        { return rfind(s, pos, traits_type::length(s)); }
+        size_type rfind(CharT ch, size_type pos = 0) const { return rfind(&ch, pos, 1); }
 
         bool contains(const CharT* s) const { return find(s) != npos; }
         bool contains(CharT c) const noexcept { return find(c) != npos; }
@@ -499,6 +576,102 @@ namespace microc {
             return find(s, size()-str_len, str_len)==size()-str_len;
         }
 
+        int compare(size_type pos1, size_type count1, const CharT* s, size_type count2) const {
+            // Compares a [pos1, pos1+count1) substring of this string to the characters in the
+            // range [s, s + count2). If count1 > size() - pos1 the substring is [pos1, size()).
+            // (Note: the characters in the range [s, s + count2) may include null characters.)
+            size_type sz = size();
+            if (pos1 > sz || count2 == npos) {
+                throw_out_of_bounds_exception_if_can();
+                return 2;
+            }
+            size_type rlen = minnnn(count1, sz - pos1);
+            int r = traits_type::compare(data() + pos1, s, minnnn(rlen, count2));
+            if (r == 0) {
+                if (rlen < count2) r=-1;
+                else if (rlen > count2) r=1;
+            }
+            return r;
+        }
+        int compare(size_type pos1, size_type count1, const CharT* s) const
+        { return compare(pos1, count1, s, traits_type::length(s)); }
+        int compare(const CharT* s) const {
+            auto len = traits_type::length(s);
+            return compare(0, len, s, len);
+        }
+        int compare(size_type pos1, size_type count1,
+                    const basic_string& str,
+                    size_type pos2, size_type count2 = npos ) const {
+            count2 = minnnn(count2, str.size()-pos2);
+            return compare(pos1, count1, str.data()+pos2, count2);
+        }
+        int compare(size_type pos1, size_type count1, const basic_string& str) const
+        { return compare(pos1, count1, str.data(), str.size()); }
+        int compare(const basic_string& str) const noexcept
+        { return compare(0, size(), str.data(), str.size()); }
+        // find_first_of
+        size_type find_first_of(const CharT* s, size_type pos, size_type count) const {
+            for(size_type ix = pos; ix < size(); ++ix)
+                for(size_type jx = 0; jx < count; ++jx)
+                    if(eq(*(_data+ix), *(s+jx))) return (_data+ix);
+            return npos;
+        }
+        size_type find_first_of(const CharT* s, size_type pos = 0) const
+        { return find_first_of(s, pos, traits_type::length(s)); }
+        size_type find_first_of(CharT ch, size_type pos = 0) const
+        { return find_first_of(&ch, pos, 1); }
+        size_type find_first_of(const basic_string& str, size_type pos = 0) const
+        { return find_first_of(str.data(), pos, str.size()); }
+        // find_last_of
+        size_type find_last_of(const CharT* s, size_type pos, size_type count) const {
+            pos=minnnn(pos, size()-1);
+            for(size_type ix = pos+1; ix; --ix)
+                for(size_type jx = 0; jx < count; ++jx)
+                    if(eq(*(_data+ix-1), *(s+jx))) return (_data+ix-1);
+            return npos;
+        }
+        size_type find_last_of(const CharT* s, size_type pos = npos) const
+        { return find_last_of(s, pos, traits_type::length(s)); }
+        size_type find_last_of(CharT ch, size_type pos = npos) const
+        { return find_last_of(&ch, pos, 1); }
+        size_type find_last_of(const basic_string& str, size_type pos = npos) const
+        { return find_last_of(str.data(), pos, str.size()); }
+        // find_first_not_of
+        size_type find_first_not_of(const CharT* s, size_type pos, size_type count) const {
+            for(size_type ix = pos; ix < size(); ++ix) {
+                bool found = true;
+                for (size_type jx = 0; jx < count; ++jx)
+                    if (eq(*(_data + ix), *(s + jx))) {
+                        found=false;break;
+                    }
+                if(found) return ix;
+            }
+            return npos;
+        }
+        size_type find_first_not_of(const CharT* s, size_type pos = 0) const
+        { return find_first_not_of(s, pos, traits_type::length(s)); }
+        size_type find_first_not_of(const basic_string& str, size_type pos = 0) const
+        { return find_first_not_of(str.data(), pos, str.size()); }
+        size_type find_first_not_of(CharT ch, size_type pos = 0) const
+        { return find_first_not_of(&ch, pos, 1); }
+        // find_last_not_of
+        size_type find_last_not_of(const CharT* s, size_type pos, size_type count) const {
+            for(size_type ix = pos+1; ix; --ix) {
+                bool found = true;
+                for (size_type jx = 0; jx < count; ++jx)
+                    if (eq(*(_data + ix-1), *(s + jx))) {
+                        found=false;break;
+                    }
+                if(found) return ix-1;
+            }
+            return npos;
+        }
+        size_type find_last_not_of(const CharT* s, size_type pos = 0) const
+        { return find_last_not_of(s, pos, traits_type::length(s)); }
+        size_type find_last_not_of(const basic_string& str, size_type pos = 0) const
+        { return find_last_not_of(str.data(), pos, str.size()); }
+        size_type find_last_not_of(CharT ch, size_type pos = 0) const
+        { return find_last_not_of(&ch, pos, 1); }
 
         // Iterators
         const_iterator begin() const noexcept {return _data;}
@@ -508,6 +681,7 @@ namespace microc {
 
         // etc..
         Allocator get_allocator() const noexcept { return Allocator(_alloc); }
+#undef minnnn
     };
 
     template<class CharT, class Traits, class Allocator>
@@ -519,4 +693,7 @@ namespace microc {
             if(!(lhs[ix]==rhs[ix])) return false;
         return true;
     }
+
+    template<class CharT, class Traits, class Allocator>
+    CharT basic_string<CharT, Traits, Allocator>::_null_char = CharT(0);
 }

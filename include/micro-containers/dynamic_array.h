@@ -180,14 +180,19 @@ namespace microc {
             const auto copy_size = old_size < new_capacity ? old_size : new_capacity;
 
             T * _new_data = nullptr;
-            if(new_capacity) _new_data = _alloc.allocate(new_capacity);
-            // move all previous objects into new location,
-            // therefore we do not need to destruct because we move from same allocator
-            for (size_type ix = 0; ix < copy_size; ++ix)
-                ::new (_new_data + ix, microc_new::blah) T(microc::traits::move(_data[ix]));
-
-            // de allocate old data
-            if(_data) _alloc.deallocate(_data, capacity());
+            if(new_capacity) {
+                _new_data = _alloc.allocate(new_capacity);
+                // move all previous objects into new location,
+                // therefore we do not need to destruct because we move from same allocator
+                for (size_type ix = 0; ix < copy_size; ++ix)
+                    ::new(_new_data + ix, microc_new::blah) T(microc::traits::move(_data[ix]));
+            }
+            if(_data) { // de allocate old data
+                // destruct suffix items in old memory, that didn't make it to new memory,
+                // This happens when shrinking is happening.
+                for (size_type ix = copy_size; ix < old_size; ++ix) (_data + ix)->~T();
+                _alloc.deallocate(_data, capacity());
+            }
             _data = _new_data;
             _cap = new_capacity;
         }
