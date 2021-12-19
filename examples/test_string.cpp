@@ -698,8 +698,22 @@ void test_stoi_l_ll() {
     std::cout << "- string = " << number5.c_str() << ", number = " << microc::stoi(number5, nullptr, 0) << std::endl;
 }
 
+void test_hash() {
+    print_test_header("test_hash");
+
+    string s1 = "Stand back! I've got jimmies!";
+    string s2 = "ab";
+    string s3 = "ba";
+    string s4 = "0";
+
+    std::cout << microc::hash<string>{}(s1) << '\n';
+    std::cout << microc::hash<string>{}(s2) << '\n';
+    std::cout << microc::hash<string>{}(s3) << '\n';
+    std::cout << microc::hash<string>{}(s4) << '\n';
+}
+
 int main() {
-    test_stoi_l_ll();
+    test_hash();
 
     return 0;
     // Operations
@@ -743,6 +757,12 @@ int main() {
     test_compare_operator();
 
     // stoi
+
     test_strtol();
+    test_stoi_l_ll();
+
+    // Hash
+    test_hash();
+
 }
 

@@ -154,11 +154,11 @@ inline void* operator new (microc::size_t n, void* ptr, enum microc_new) noexcep
 }
 
 namespace microc {
-    template<class Key> struct micro_hash{};
-    template<> struct micro_hash<unsigned> {
+    template<class Key> struct hash{};
+    template<> struct hash<unsigned> {
         microc::size_t operator()(unsigned const s) const noexcept { return s; }
     };
-    template<> struct micro_hash<signed> {
+    template<> struct hash<signed> {
         microc::size_t operator()(signed const s) const noexcept { return s & ~(1<<((sizeof(s)<<3)-1)) ; }
     };
 

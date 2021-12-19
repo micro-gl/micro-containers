@@ -945,4 +945,27 @@ namespace microc {
     { return __str_to_integer<unsigned long>(str, pos, base); }
     unsigned long long stoull(const microc::string& str, microc::size_t* pos = nullptr, int base = 10)
     { return __str_to_integer<unsigned long long>(str, pos, base); }
+
+    template<class char_type, class size_type, size_type p=31>
+    size_type __simple_hash_cstr(const char_type * s, size_type count) {
+        size_type m = 1;
+        size_type hash_code = 0;
+        for (const char_type * e = s+count; s<e; ++s) {
+            hash_code += size_type(*s) * m; m*=p;
+        }
+        return hash_code;
+    }
+
+    template<> struct hash<string> {
+        string::size_type operator()(const string & s) const noexcept
+        { return __simple_hash_cstr<string::value_type, string::size_type>(s.c_str(), s.size()); }
+    };
+    template<> struct hash<u16string> {
+        u16string::size_type operator()(const u16string & s) const noexcept
+        { return __simple_hash_cstr<u16string::value_type, u16string::size_type>(s.c_str(), s.size()); }
+    };
+    template<> struct hash<u32string> {
+        u32string::size_type operator()(const u32string & s) const noexcept
+        { return __simple_hash_cstr<u32string::value_type, u32string::size_type>(s.c_str(), s.size()); }
+    };
 }

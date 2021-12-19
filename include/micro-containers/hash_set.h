@@ -27,7 +27,7 @@ namespace microc {
      * @tparam Allocator allocator type
      */
     template<class Key,
-            class Hash=microc::micro_hash<Key>,
+            class Hash=microc::hash<Key>,
             class Allocator=microc::std_allocator<char>>
     class hash_set {
     public:
