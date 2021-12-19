@@ -81,7 +81,12 @@ namespace microc {
     template<> struct char_traits<char32_t> :
             public __common_char_traits<char32_t, unsigned int, microc::size_t, void, void, 0xFFFFFFFF> {};
 
-
+    /**
+     * Basic String, Allocator-aware, but does not propagate allocators on copy/move.
+     * @tparam CharT The type for a character
+     * @tparam Traits The implementation of basic character operations
+     * @tparam Allocator The allocator
+     */
     template<class CharT,
              class Traits = microc::char_traits<CharT>,
              class Allocator = microc::std_allocator<CharT>>
