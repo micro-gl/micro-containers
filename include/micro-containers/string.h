@@ -483,6 +483,7 @@ namespace microc {
         }
         basic_string& insert(size_type index, const basic_string& str, size_type index_str,
                              size_type count = npos) {
+            // insert sub_str = str[index_str, index_str+count) in this[index]
             count = minnnn(count, str.size()-index_str);
             if(str.begin()>=begin() and str.end()<=end()) { // belongs to me
                 basic_string temp = str.substr(index_str, count);
@@ -760,5 +761,84 @@ namespace microc {
     using u8string = basic_string<unsigned char, char_traits<unsigned char>, microc::std_allocator<unsigned char>>;
     using u16string = basic_string<char16_t, char_traits<char16_t>, microc::std_allocator<char16_t>>;
     using u32string = basic_string<char32_t, char_traits<char32_t>, microc::std_allocator<char32_t>>;
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(const microc::basic_string<CharT,Traits,Alloc>& lhs,
+              const microc::basic_string<CharT,Traits,Alloc>& rhs) {
+        auto str = lhs; str+=rhs; return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(const microc::basic_string<CharT,Traits,Alloc>& lhs,
+              const CharT* rhs) {
+        auto str = lhs; str+=rhs; return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(const microc::basic_string<CharT,Traits,Alloc>& lhs, CharT rhs) {
+        auto str = lhs; str+=rhs; return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(const CharT* lhs,
+              const microc::basic_string<CharT,Traits,Alloc>& rhs) {
+        using str_t = basic_string<CharT,Traits,Alloc>;
+        str_t str(rhs.get_allocator()); str=lhs; str+=rhs; return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(CharT lhs, const microc::basic_string<CharT,Traits,Alloc>& rhs) {
+        using str_t = basic_string<CharT,Traits,Alloc>;
+        str_t str(rhs.get_allocator()); str=lhs; str+=rhs; return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(microc::basic_string<CharT,Traits,Alloc>&& lhs,
+              microc::basic_string<CharT,Traits,Alloc>&& rhs) {
+        using str_t = basic_string<CharT,Traits,Alloc>;
+        str_t str(microc::traits::move(lhs)); str+=rhs; return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(microc::basic_string<CharT,Traits,Alloc>&& lhs,
+              const microc::basic_string<CharT,Traits,Alloc>& rhs) {
+        using str_t = basic_string<CharT,Traits,Alloc>;
+        str_t str(microc::traits::move(lhs)); str+=rhs; return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(microc::basic_string<CharT,Traits,Alloc>&& lhs,
+              const CharT* rhs) {
+        using str_t = basic_string<CharT,Traits,Alloc>;
+        str_t str(microc::traits::move(lhs)); str+=rhs; return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(microc::basic_string<CharT,Traits,Alloc>&& lhs,
+              CharT rhs) {
+        using str_t = basic_string<CharT,Traits,Alloc>;
+        str_t str(microc::traits::move(lhs)); str+=rhs; return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(const microc::basic_string<CharT,Traits,Alloc>& lhs,
+              microc::basic_string<CharT,Traits,Alloc>&& rhs) {
+        using str_t = basic_string<CharT,Traits,Alloc>;
+        str_t str(microc::traits::move(rhs)); str.insert(0, lhs); return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(const CharT* lhs,
+              microc::basic_string<CharT,Traits,Alloc>&& rhs) {
+        using str_t = basic_string<CharT,Traits,Alloc>;
+        str_t str(microc::traits::move(rhs)); str.insert(0, lhs); return str;
+    }
+
+    template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
+    operator+(CharT lhs,
+              microc::basic_string<CharT,Traits,Alloc>&& rhs) {
+        using str_t = basic_string<CharT,Traits,Alloc>;
+        str_t str(microc::traits::move(rhs)); str.insert(str.begin(), lhs); return str;
+    }
 
 }

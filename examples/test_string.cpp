@@ -639,8 +639,16 @@ void test_ctors() {
     }
 }
 
+void test_concat_operator_plus() {
+    print_test_header("test_concat_operator_plus");
+
+    string s1 = "Hello";
+    string s2 = "world";
+    std::cout << (s1 + ' ' + s2 + "!\n" + s1.c_str() + ' ' + s2.c_str()).c_str();
+}
+
 int main() {
-    test_append();
+    test_concat_operator_plus();
 
     return 0;
     // Operations
@@ -677,6 +685,10 @@ int main() {
     // Constructors
 
     test_ctors();
+
+    // misc
+
+    test_concat_operator_plus();
 
 }
 
