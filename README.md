@@ -6,6 +6,7 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 
 ## Introduction
 #### Sequence Containers
+* string
 * array
 * static_array
 * dynamic_array
@@ -32,6 +33,7 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 
 #### Algorithms
 - make_heap, is_heap, push_heap, pop_heap, sort_heap
+- find, find_if, find_if_not
 
 
 ## Installing `micro{containers}`

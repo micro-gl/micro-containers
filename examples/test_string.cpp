@@ -14,10 +14,6 @@ void print_string(const string & str) {
 void test_replace() {
     print_test_header("test_replace");
 
-    std::string a1 = "tomer tomer tomer";
-    std::string a2 = "ABC";
-    a2.replace(1, 10, a1);
-
     string a1_ = "tomer tomer tomer";
     string a2_ = "ABC";
     std::cout << "- a1_=" << a1_.c_str() << std::endl;
@@ -40,10 +36,6 @@ void test_replace() {
 
 void test_insert() {
     print_test_header("test_insert");
-
-    std::string a1 = "tomer tomer tomer";
-    std::string a2 = "ABC";
-    a2.replace(1, 10, a1);
 
     string s = "tomer tomer tomer";
     string s2 = "ABC";
@@ -152,7 +144,7 @@ void test_substr() {
     string sub4 = a.substr(a.size()-3, 50);
     std::cout << "- sub4 = a.substr(a.size()-3, 50); sub4= " << sub4.c_str() << '\n';
     // this is effectively equivalent to
-    // std::string sub4 = a.substr(17, 3);
+    // string sub4 = a.substr(17, 3);
     // since a.size() == 20, pos == a.size()-3 == 17, and a.size()-pos == 3
 
     try {
@@ -401,7 +393,7 @@ void test_find_first_of() {
     std::cout << str.find_first_of(search_str, 5) << '\n';
     std::cout << str.find_first_of(search_cstr) << '\n';
     std::cout << str.find_first_of(search_cstr, 0, 4) << '\n';
-    // 'x' is not in "Hello World', thus it will return std::string::npos
+    // 'x' is not in "Hello World', thus it will return string::npos
     std::cout << str.find_first_of('x') << '\n';
 }
 
@@ -463,7 +455,7 @@ void test_find_last_not_of() {
     show_pos(str, str.find_last_not_of(arr)); // [5] = '2'
 
     str_last_pos = 2;
-    std::string::size_type skip_set_size { 4 };
+    string::size_type skip_set_size { 4 };
     show_pos(str, str.find_last_not_of(skip_set,
                                        str_last_pos,
                                        skip_set_size)); // [2] = 'c'
@@ -474,8 +466,102 @@ void test_find_last_not_of() {
     show_pos(str, str.find_last_not_of("abc", str_last_pos)); // not found
 }
 
+void test_assignment() {
+    print_test_header("test_assignment");
+
+    string from = "from";
+    string from_copied = "from_copied";
+    string from_moved = "from_moved";
+
+    std::cout << "- from = " << from.c_str() << '\n';
+    std::cout << "- from_copied = " << from_copied.c_str() << '\n';
+    std::cout << "- from_moved = " << from_moved.c_str() << '\n';
+    from_copied = from;
+    std::cout << "- from_copied = from; from_copied = " << from_copied.c_str() << '\n';
+    from_moved = std::move(from);
+    std::cout << "- from_moved = std::move(from); from_moved = " << from_moved.c_str() << '\n';
+    std::cout << "- from = " << from.c_str() << '\n';
+}
+
+void test_ctors() {
+    print_test_header("test_ctors");
+
+    {
+        std::cout << "1) string(); ";
+        string s;
+        assert(s.empty() && (s.length() == 0) && (s.size() == 0));
+        std::cout << "s.capacity(): " << s.capacity() << '\n'; // unspecified
+    }
+
+    {
+        std::cout << "2) string(size_type count, charT ch): ";
+        string s(4, '=');
+        std::cout << s.c_str() << '\n'; // "===="
+    }
+
+    {
+        std::cout << "3) string(const string& other, size_type pos, size_type count): ";
+        string const other("Exemplary");
+        string s(other, 0, other.length()-1);
+        std::cout << s.c_str() << '\n'; // "Exemplar"
+    }
+
+    {
+        std::cout << "4) string(const string& other, size_type pos): ";
+        string const other("Mutatis Mutandis");
+        string s(other, 8);
+        std::cout << s.c_str() << '\n'; // "Mutandis", i.e. [8, 16)
+    }
+
+    {
+        std::cout << "5) string(charT const* s, size_type count): ";
+        string s("C-style string", 7);
+        std::cout << s.c_str() << '\n'; // "C-style", i.e. [0, 7)
+    }
+
+    {
+        std::cout << "6) string(charT const* s): ";
+        string s("C-style\0string");
+        std::cout << s.c_str() << '\n'; // "C-style"
+    }
+
+    {
+        std::cout << "7) string(InputIt first, InputIt last): ";
+        char mutable_c_str[] = "another C-style string";
+        string s(std::begin(mutable_c_str)+8, std::end(mutable_c_str)-1);
+        std::cout << s.c_str() << '\n'; // "C-style string"
+    }
+
+    {
+        std::cout << "8) string(string&): ";
+        string const other("Exemplar");
+        string s(other);
+        std::cout << s.c_str() << '\n'; // "Exemplar"
+    }
+
+    {
+        std::cout << "9) string(string&&): ";
+//        string s(string("C++ by ") + string("example"));
+//        std::cout << s.c_str() << '\n'; // "C++ by example"
+    }
+
+    {
+        std::cout << "α) string(std::initializer_list<charT>): ";
+        string s(std::initializer_list<char>{ 'C', '-', 's', 't', 'y', 'l', 'e' });
+        std::cout << s.c_str() << '\n'; // "C-style"
+    }
+    {    // before C++11, overload resolution selects string(InputIt first, InputIt last)
+        // [with InputIt = int] which behaves *as if* string(size_type count, charT ch)
+        // after C++11 the InputIt constructor is disabled for integral types and calls:
+        std::cout << "β) string(size_type count, charT ch) is called: ";
+        string s(3, 'A');
+        std::cout << s.c_str() << '\n'; // "AAA"
+    }
+}
+
 int main() {
     // Operations
+
 //    test_clear();
 //    test_insert();
 //    test_erase();
@@ -487,6 +573,7 @@ int main() {
 //    test_resize();
 
     // Search / Queries
+
 //    test_compare();
 //    test_starts_with();
 //    test_ends_with();
@@ -496,10 +583,13 @@ int main() {
 //    test_find_first_of();
 //    test_find_last_of();
 //    test_find_first_not_of();
-    test_find_last_not_of();
+//    test_find_last_not_of();
 
+    // Copy / Move Assign operator
+    test_assignment();
 
-//    test_erase();
-//    test_resize();
+    // Constructors
+    test_ctors();
+
 }
 

@@ -13,6 +13,28 @@
 namespace microc {
 
     namespace traits {
+        // integral constant
+        template <class Tp, Tp _v>
+        struct integral_constant
+        {
+            static constexpr const Tp      value = _v;
+            typedef Tp               value_type;
+            typedef integral_constant type;
+            constexpr operator value_type() const noexcept {return value;}
+        };
+
+        typedef integral_constant<bool, true> true_type;
+        typedef integral_constant<bool, false> false_type;
+
+        template <class _Tp> struct is_lvalue_reference       : public false_type {};
+        template <class _Tp> struct is_lvalue_reference<_Tp&> : public true_type {};
+
+        template <class _Tp> struct is_rvalue_reference        : public false_type {};
+        template <class _Tp> struct is_rvalue_reference<_Tp&&> : public true_type {};
+
+        template <class _Tp> struct is_reference        : public false_type {};
+        template <class _Tp> struct is_reference<_Tp&>  : public true_type {};
+        template <class _Tp> struct is_reference<_Tp&&> : public true_type {};
 
         template< class T > struct remove_reference      {typedef T type;};
         template< class T > struct remove_reference<T&>  {typedef T type;};
@@ -46,6 +68,8 @@ namespace microc {
         }
         template <class _Tp> inline _Tp&&
         forward(typename remove_reference<_Tp>::type&& __t) noexcept {
+            static_assert(!is_lvalue_reference<_Tp>::value,
+                          "can not forward an rvalue as an lvalue");
             return static_cast<_Tp&&>(__t);
         }
 
@@ -72,19 +96,6 @@ namespace microc {
         template< bool B, class T = void >
         using enable_if_t = typename enable_if<B,T>::type;
 
-        // integral constant
-        template <class Tp, Tp _v>
-        struct integral_constant
-        {
-            static constexpr const Tp      value = _v;
-            typedef Tp               value_type;
-            typedef integral_constant type;
-            constexpr operator value_type() const noexcept {return value;}
-        };
-
-        typedef integral_constant<bool, true> true_type;
-        typedef integral_constant<bool, false> false_type;
-
         // allocator aware traits with SFINAE
         template <typename T, typename = int>
         struct is_allocator_aware : microc::traits::false_type { };
@@ -97,8 +108,7 @@ namespace microc {
 //        template <typename T>
 //        struct is_allocator_aware <T, decltype((void) T().get_allocator(), 0)> : microc::traits::true_type { };
 
-        template<class T>
-        struct is_integral { constexpr static bool value = false; };
+        template<class T> struct is_integral { constexpr static bool value = false; };
         template<> struct is_integral<unsigned> { constexpr static bool value = true; };
         template<> struct is_integral<signed> { constexpr static bool value = true; };
         template<> struct is_integral<char> { constexpr static bool value = true; };

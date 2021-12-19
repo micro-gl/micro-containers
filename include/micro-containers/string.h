@@ -122,7 +122,7 @@ namespace microc {
             reserve(count);
             for (size_type ix = 0; ix < count; ++ix) push_back(ch);
         }
-        basic_string(const basic_string& other, size_type pos, size_type count,
+        basic_string(const basic_string& other, size_type pos, size_type count=npos,
                      const Allocator& alloc = Allocator()) : basic_string(alloc) {
             count = minnnn(count, other.size()-pos);
             reserve(count);
@@ -286,7 +286,7 @@ namespace microc {
             _data = _new_data;
             _cap = new_capacity;
         }
-        void write_null_termination_at_end() { traits_type::assign(*end(), value_type(0)); }
+        void write_null_termination_at_end() { if (capacity()) traits_type::assign(*end(), value_type(0)); }
         template<class TT> void internal_push_back(TT && v) noexcept {
             if(size() >= capacity()) {
                 // copy the value, edge case if v belongs
