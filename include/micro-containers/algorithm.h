@@ -180,4 +180,23 @@ namespace microc {
             if (!q(*first)) { return first; }
         return last;
     }
+
+    // iterators stuff
+    template <class _Tp, size_t _Np>
+    _Tp* begin(_Tp (&__array)[_Np]) { return __array; }
+    template <class _Tp, size_t _Np>
+    _Tp* end(_Tp (&__array)[_Np]) { return __array + _Np; }
+
+    template <class _Cp>
+    auto begin(_Cp& __c) -> decltype(__c.begin()) { return __c.begin(); }
+
+    template <class _Cp>
+    auto begin(const _Cp& __c) -> decltype(__c.begin()) { return __c.begin(); }
+
+    template <class _Cp>
+    auto end(_Cp& __c) -> decltype(__c.end()) { return __c.end(); }
+
+    template <class _Cp>
+    auto end(const _Cp& __c) -> decltype(__c.end()) { return __c.end(); }
+
 }

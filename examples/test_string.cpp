@@ -5,7 +5,6 @@
 
 using namespace microc;
 #include <string>
-using string = basic_string<char, char_traits<char>>;
 
 void print_string(const string & str) {
     std::cout << str.c_str() << std::endl;
@@ -124,6 +123,45 @@ void test_operator_plus_assign() {
     s+=s;
     std::cout << "- s+=s; s= " << s.c_str() << std::endl;
 }
+
+void test_append() {
+    print_test_header("test_append");
+
+    basic_string<char> str = "string";
+    const char* cptr = "C-string";
+    const char carr[] = "Two and one";
+
+    string output;
+
+    // 1) Append a char 3 times.
+    // Notice, this is the only overload accepting chars.
+    output.append(3, '*');
+    std::cout << "1) " << output.c_str() << "\n";
+
+    //  2) Append a whole string
+    output.append(str);
+    std::cout << "2) " << output.c_str() << "\n";
+
+    // 3) Append part of a string (last 3 letters, in this case)
+    output.append(str, 3, 3);
+    std::cout << "3) " << output.c_str() << "\n";
+
+    // 4) Append part of a C-string
+    // Notice, because `append` returns *this, we can chain calls together
+    output.append(1, ' ').append(carr, 4);
+    std::cout << "4) " << output.c_str() << "\n";
+
+    // 5) Append a whole C-string
+    output.append(cptr);
+    std::cout << "5) " << output.c_str() << "\n";
+
+    // 6) Append range
+    output.append(&carr[3], microc::end(carr)-1);
+    std::cout << "6) " << output.c_str() << "\n";
+
+    // 7) Append initializer list
+    output.append(std::initializer_list<char>{ ' ', 'l', 'i', 's', 't' });
+    std::cout << "7) " << output.c_str() << "\n";}
 
 void test_substr() {
     print_test_header("test_substr");
@@ -466,8 +504,8 @@ void test_find_last_not_of() {
     show_pos(str, str.find_last_not_of("abc", str_last_pos)); // not found
 }
 
-void test_assignment() {
-    print_test_header("test_assignment");
+void test_assignment_operator() {
+    print_test_header("test_assignment_operator");
 
     string from = "from";
     string from_copied = "from_copied";
@@ -480,7 +518,49 @@ void test_assignment() {
     std::cout << "- from_copied = from; from_copied = " << from_copied.c_str() << '\n';
     from_moved = std::move(from);
     std::cout << "- from_moved = std::move(from); from_moved = " << from_moved.c_str() << '\n';
-    std::cout << "- from = " << from.c_str() << '\n';
+    from = "from_string";
+    std::cout << "- from = \"from_string\"; from = " << from.c_str() << '\n';
+    from = 'C';
+    std::cout << "- from = 'C'; from = " << from.c_str() << '\n';
+}
+
+void test_assign() {
+    print_test_header("test_assign");
+
+    string s;
+    // assign(size_type count, CharT ch)
+    s.assign(4, '=');
+    std::cout << s.c_str() << '\n'; // "===="
+
+    string const c("Exemplary");
+    // assign(basic_string const& str)
+    s.assign(c);
+    std::cout << c.c_str() << " == " << s.c_str() <<'\n'; // "Exemplary == Exemplary"
+
+    // assign(basic_string const& str, size_type pos, size_type count)
+    s.assign(c, 0, c.length()-1);
+    std::cout << s.c_str() << '\n'; // "Exemplar";
+
+    // assign(basic_string&& str)
+    s.assign(string("C++ by ") += "example");
+    std::cout << s.c_str() << '\n'; // "C++ by example"
+
+    // assign(charT const* s, size_type count)
+    s.assign("C-style string", 7);
+    std::cout << s.c_str() << '\n'; // "C-style"
+
+    // assign(charT const* s)
+    s.assign("C-style\0string");
+    std::cout << s.c_str() << '\n'; // "C-style"
+
+    char mutable_c_str[] = "C-style string";
+    // assign(InputIt first, InputIt last)
+    s.assign(microc::begin(mutable_c_str), microc::end(mutable_c_str)-1);
+    std::cout << s.c_str() << '\n'; // "C-style string"
+
+    // assign(std::initializer_list<charT> ilist)
+    s.assign(std::initializer_list<char>{ 'C', '-', 's', 't', 'y', 'l', 'e' });
+    std::cout << s.c_str() << '\n'; // "C-style"
 }
 
 void test_ctors() {
@@ -560,35 +640,42 @@ void test_ctors() {
 }
 
 int main() {
+    test_append();
+
+    return 0;
     // Operations
 
-//    test_clear();
-//    test_insert();
-//    test_erase();
-//    test_push_pop_back();
-//    test_operator_plus_assign();
-//    test_replace();
-//    test_substr();
-//    test_copy();
-//    test_resize();
+    test_clear();
+    test_insert();
+    test_erase();
+    test_push_pop_back();
+    test_operator_plus_assign();
+    test_append();
+    test_replace();
+    test_substr();
+    test_copy();
+    test_resize();
 
     // Search / Queries
 
-//    test_compare();
-//    test_starts_with();
-//    test_ends_with();
-//    test_contains();
-//    test_find();
-//    test_rfind();
-//    test_find_first_of();
-//    test_find_last_of();
-//    test_find_first_not_of();
-//    test_find_last_not_of();
+    test_compare();
+    test_starts_with();
+    test_ends_with();
+    test_contains();
+    test_find();
+    test_rfind();
+    test_find_first_of();
+    test_find_last_of();
+    test_find_first_not_of();
+    test_find_last_not_of();
 
     // Copy / Move Assign operator
-    test_assignment();
+
+    test_assignment_operator();
+    test_assign();
 
     // Constructors
+
     test_ctors();
 
 }

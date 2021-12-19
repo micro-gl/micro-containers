@@ -6,7 +6,7 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 
 ## Introduction
 #### Sequence Containers
-* string
+* string_string, string
 * array
 * static_array
 * dynamic_array

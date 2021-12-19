@@ -72,6 +72,9 @@ namespace microc {
     template<> struct char_traits<char> :
             public __common_char_traits<char, int, microc::size_t, void, void, -1> {};
 
+    template<> struct char_traits<unsigned char> :
+            public __common_char_traits<unsigned char, int, microc::size_t, void, void, 0xFF> {};
+
     template<> struct char_traits<char16_t> :
             public __common_char_traits<char16_t, unsigned short, microc::size_t, void, void, 0xFFFF> {};
 
@@ -105,6 +108,16 @@ namespace microc {
             throw out_of_bounds_exception();
 #endif
         }
+        struct iter_single {
+            using dtype = difference_type;
+            CharT * ch; size_type i;
+            iter_single(CharT * ch, size_type index) : ch(ch), i(index) {}
+            iter_single operator++() { return *this; }
+            iter_single operator--() { return *this; }
+            difference_type operator-(const iter_single & o) { return dtype(i) - dtype(o.i); }
+            bool operator!=(const iter_single & o) const { return i!=o.i; }
+            CharT & operator *() { return *ch; }
+        };
 
         value_type * _data;
         rebind_allocator_type _alloc;
@@ -162,13 +175,50 @@ namespace microc {
 
         ~basic_string() noexcept { drain(); }
 
-        // Assignment operator
+        // Iterators
+        const_iterator begin() const noexcept {return _data;}
+        const_iterator end() const noexcept {return _data + size();}
+        iterator begin() noexcept {return _data;}
+        iterator end()  noexcept {return _data + size();}
+
+        // etc..
+        Allocator get_allocator() const noexcept { return Allocator(_alloc); }
+
+        // Element access
+        reference operator[](size_type i) { return _data[i]; }
+        const_reference operator[](size_type i) const { return _data[i]; }
+        reference at(size_type pos) {
+            if(pos>=0 && pos < size()) return _data[pos];
+            throw_out_of_bounds_exception_if_can();
+        }
+        const_reference at(size_type pos) const {
+            if(pos>=0 && pos < size()) return _data[pos];
+            throw_out_of_bounds_exception_if_can();
+        }
+        CharT* data() noexcept { return size() ? _data : &_null_char; }
+        const CharT* data() const noexcept { return size() ? _data : &_null_char;; }
+        const CharT* c_str() const noexcept { return data(); }
+        reference back() { return _data[_current-1]; }
+        reference front() { return _data[0]; }
+        const_reference back() const { return _data[_current-1]; }
+        const_reference front() const { return _data[0]; }
+
+        // Capacity
+        bool empty() noexcept { return _current==0; }
+        size_type size() const noexcept { return _current; }
+        size_type length() const noexcept { return _current; }
+        size_type capacity() const noexcept { return _cap; }
+        void shrink_to_fit() { re_alloc_to(size()); }
+        void reserve(size_type new_cap) {
+            if(new_cap <= capacity()) return;
+            re_alloc_to(new_cap);
+        }
+
+        // Assignment
         basic_string & operator=(const basic_string & other) noexcept {
             if(this!= &other) {
-                clear();
-                reserve(other.size());
-                for(size_type ix = 0; ix < other.size(); ix++)
-                    push_back(other[ix]);
+                clear(); reserve(other.size());
+                for(size_type ix = 0; ix < other.size(); ix++) push_back(other[ix]);
             }
             return (*this);
         }
@@ -219,35 +269,27 @@ namespace microc {
             for (const auto & item : other) push_back(item);
             return *this;
         }
-
-        // Element access
-        reference operator[](size_type i) { return _data[i]; }
-        const_reference operator[](size_type i) const { return _data[i]; }
-        reference at(size_type pos) {
-            if(pos>=0 && pos < size()) return _data[pos];
-            throw_out_of_bounds_exception_if_can();
+        // assign
+        template<class InputIt, typename = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
+        basic_string& assign(InputIt first, InputIt last) {
+            const auto count = last-first;
+            clear(); reserve(count);
+            for(size_type ix = 0; ix < count; ix++, ++first) push_back(*first);
+            return *this;
         }
-        const_reference at(size_type pos) const {
-            if(pos>=0 && pos < size()) return _data[pos];
-            throw_out_of_bounds_exception_if_can();
+        template<class Iterable> basic_string& assign(const Iterable & iterable) {
+            return assign<decltype(iterable.begin())>(iterable.begin(), iterable.end());
         }
-        CharT* data() noexcept { return size() ? _data : &_null_char; }
-        const CharT* data() const noexcept { return size() ? _data : &_null_char;; }
-        const CharT* c_str() const noexcept { return data(); }
-        reference back() { return _data[_current-1]; }
-        reference front() { return _data[0]; }
-        const_reference back() const { return _data[_current-1]; }
-        const_reference front() const { return _data[0]; }
-
-        // Capacity
-        bool empty() noexcept { return _current==0; }
-        size_type size() const noexcept { return _current; }
-        size_type length() const noexcept { return _current; }
-        size_type capacity() const noexcept { return _cap; }
-        void shrink_to_fit() { re_alloc_to(size()); }
-        void reserve(size_type new_cap) {
-            if(new_cap <= capacity()) return;
-            re_alloc_to(new_cap);
+        basic_string& assign(const CharT* s, size_type count) { return assign<const CharT*>(s, s+count); }
+        basic_string& assign(const CharT* s) { return assign(s, traits_type::length(s)); }
+        basic_string& assign(basic_string&& str) noexcept { return this->operator=(microc::traits::move(str)); }
+        basic_string& assign(const basic_string& str, size_type pos, size_type count = npos) {
+            count = minnnn(count, str.size());
+            return assign<const_iterator>(str.begin()+pos, str.begin()+pos+count);
+        }
+        basic_string& assign(const basic_string& str) { return this->operator=(str); }
+        basic_string& assign(size_type count, CharT ch) {
+            return assign<iter_single>(iter_single(&ch, 0), iter_single(&ch, count));
         }
 
         // Modifiers
@@ -342,6 +384,29 @@ namespace microc {
             return *this;
         }
 
+        // append
+        template<class InputIt, typename = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
+        basic_string& append(InputIt first, InputIt last) {
+            const auto count = last-first;
+            reserve(size() + count);
+            for (size_type ix=0; ix < count; ++ix, ++first) push_back(*first);
+            return *this;
+        }
+        template<class Iterable> basic_string& append(const Iterable & iterable) {
+            return append<decltype(iterable.begin())>(iterable.begin(), iterable.end());
+        }
+        basic_string& append(const CharT* s, size_type count) { return append<const CharT*>(s, s+count); }
+        basic_string& append(const CharT* s) { return append(s, traits_type::length(s)); }
+        basic_string& append(const basic_string& str, size_type pos, size_type count = npos) {
+            count = minnnn(count, str.size());
+            return append<const_iterator>(str.begin()+pos, str.begin()+pos+count);
+        }
+        basic_string& append(const basic_string& str) { return this->operator+=(str); }
+        basic_string& append(size_type count, CharT ch) {
+            return append<iter_single>(iter_single(&ch, 0), iter_single(&ch, count));
+        }
+
+        // push back
         void push_back(const CharT & v) noexcept { internal_push_back(v); }
         void push_back(CharT && v) noexcept { internal_push_back(v); }
         void pop_back() {
@@ -493,16 +558,6 @@ namespace microc {
         basic_string& replace(const_iterator first, const_iterator last, const CharT* cstr)
         { return replace(first, last, cstr, traits_type::length(cstr)); }
         basic_string& replace(const_iterator first, const_iterator last, size_type count2, CharT ch) {
-            struct iter_single {
-                using dtype = difference_type;
-                CharT * ch; size_type i;
-                iter_single(CharT * ch, size_type index) : ch(ch), i(index) {}
-                iter_single operator++() { return *this; }
-                iter_single operator--() { return *this; }
-                difference_type operator-(const iter_single & o) { return dtype(i) - dtype(o.i); }
-                bool operator!=(const iter_single & o) const { return i!=o.i; }
-                CharT & operator *() { return *ch; }
-            };
             return replace<iter_single>(first, last, iter_single(&ch, 0),  iter_single(&ch, count2));
         }
         template<class InputIt> basic_string& replace(const_iterator first, const_iterator last,
@@ -685,16 +740,11 @@ namespace microc {
         size_type find_last_not_of(CharT ch, size_type pos = npos) const
         { return find_last_not_of(&ch, pos, 1); }
 
-        // Iterators
-        const_iterator begin() const noexcept {return _data;}
-        const_iterator end() const noexcept {return _data + size();}
-        iterator begin() noexcept {return _data;}
-        iterator end()  noexcept {return _data + size();}
-
-        // etc..
-        Allocator get_allocator() const noexcept { return Allocator(_alloc); }
 #undef minnnn
     };
+
+    template<class CharT, class Traits, class Allocator>
+    CharT basic_string<CharT, Traits, Allocator>::_null_char = CharT(0);
 
     template<class CharT, class Traits, class Allocator>
     bool operator==(const basic_string<CharT, Traits, Allocator>& lhs,
@@ -706,6 +756,9 @@ namespace microc {
         return true;
     }
 
-    template<class CharT, class Traits, class Allocator>
-    CharT basic_string<CharT, Traits, Allocator>::_null_char = CharT(0);
+    using string = basic_string<char, char_traits<char>, microc::std_allocator<char>>;
+    using u8string = basic_string<unsigned char, char_traits<unsigned char>, microc::std_allocator<unsigned char>>;
+    using u16string = basic_string<char16_t, char_traits<char16_t>, microc::std_allocator<char16_t>>;
+    using u32string = basic_string<char32_t, char_traits<char32_t>, microc::std_allocator<char32_t>>;
+
 }
