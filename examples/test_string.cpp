@@ -647,8 +647,25 @@ void test_concat_operator_plus() {
     std::cout << (s1 + ' ' + s2 + "!\n" + s1.c_str() + ' ' + s2.c_str()).c_str();
 }
 
+void test_compare_operator() {
+    print_test_header("test_compare_operator");
+
+    string s1 = "Hello";
+    string s2 = "world";
+    std::cout << "- s1=" << s1.c_str() << std::endl;
+    std::cout << "- s2=" << s2.c_str() << std::endl;
+    std::cout << "- s1==s1 -> " << (s1==s1) << std::endl;
+    std::cout << "- s1==s2 -> " << (s1==s2) << std::endl;
+    std::cout << "- s1==\"Hello\" -> " << (s1=="Hello") << std::endl;
+    std::cout << "- \"Hello\"==s1 -> " << ("Hello"==s1) << std::endl;
+    std::cout << "- \"Hello\"==s2 -> " << ("Hello"==s2) << std::endl;
+    std::cout << "- \"Hello\"!=s2 -> " << ("Hello"!=s2) << std::endl;
+    std::cout << "- s1!=s2 -> " << (s1!=s2) << std::endl;
+    std::cout << "- s1==s2 -> " << (s1==s2) << std::endl;
+}
+
 int main() {
-    test_concat_operator_plus();
+    test_compare_operator();
 
     return 0;
     // Operations
@@ -689,6 +706,7 @@ int main() {
     // misc
 
     test_concat_operator_plus();
+    test_compare_operator();
 
 }
 

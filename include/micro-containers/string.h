@@ -747,21 +747,53 @@ namespace microc {
     template<class CharT, class Traits, class Allocator>
     CharT basic_string<CharT, Traits, Allocator>::_null_char = CharT(0);
 
-    template<class CharT, class Traits, class Allocator>
-    bool operator==(const basic_string<CharT, Traits, Allocator>& lhs,
-                    const basic_string<CharT, Traits, Allocator>& rhs ) {
-        if(!(lhs.size()==rhs.size())) return false;
-        using size_type = typename basic_string<CharT, Traits, Allocator>::size_type;
-        for (size_type ix = 0; ix < lhs.size(); ++ix)
-            if(!(lhs[ix]==rhs[ix])) return false;
-        return true;
-    }
-
     using string = basic_string<char, char_traits<char>, microc::std_allocator<char>>;
     using u8string = basic_string<unsigned char, char_traits<unsigned char>, microc::std_allocator<unsigned char>>;
     using u16string = basic_string<char16_t, char_traits<char16_t>, microc::std_allocator<char16_t>>;
     using u32string = basic_string<char32_t, char_traits<char32_t>, microc::std_allocator<char32_t>>;
 
+    // outside equality compare operator
+    template<class CharT, class Traits, class Alloc>
+    bool operator==(const microc::basic_string<CharT, Traits, Alloc>& lhs,
+                    const microc::basic_string<CharT, Traits, Alloc>& rhs) {
+        if(lhs.size()!=rhs.size()) return false;
+        using size_type = typename microc::basic_string<CharT, Traits, Alloc>::size_type;
+        using traits_type = typename microc::basic_string<CharT,Traits, Alloc>::traits_type;
+        return traits_type::compare(lhs.c_str(), rhs.c_str(), lhs.size())==0;
+    }
+    template<class CharT, class Traits, class Alloc>
+    bool operator!=(const microc::basic_string<CharT, Traits, Alloc>& lhs,
+                    const microc::basic_string<CharT, Traits, Alloc>& rhs) {
+        return !(lhs==rhs);
+    }
+
+    template<class CharT, class Traits, class Alloc>
+    bool operator==(const microc::basic_string<CharT,Traits,Alloc>& lhs, const CharT* rhs) {
+        using traits_type = typename microc::basic_string<CharT,Traits,Alloc>::traits_type;
+        const auto len = traits_type::length(rhs);
+        if(lhs.size()!=len) return false;
+        return traits_type::compare(lhs.c_str(), rhs, lhs.size())==0;
+    }
+
+    template<class CharT, class Traits, class Alloc>
+    bool operator==(const CharT* lhs, const microc::basic_string<CharT,Traits,Alloc>& rhs) {
+        using traits_type = typename microc::basic_string<CharT,Traits,Alloc>::traits_type;
+        const auto len = traits_type::length(lhs);
+        if(rhs.size()!=len) return false;
+        return traits_type::compare(lhs, rhs.c_str(), rhs.size())==0;
+    }
+
+    template<class CharT, class Traits, class Alloc>
+    bool operator!=(const microc::basic_string<CharT,Traits,Alloc>& lhs, const CharT* rhs) {
+        return !(lhs==rhs);
+    }
+
+    template<class CharT, class Traits, class Alloc>
+    bool operator!=(const CharT* lhs, const microc::basic_string<CharT,Traits,Alloc>& rhs) {
+        return !(lhs==rhs);
+    }
+
+    // outside concat operator
     template<class CharT, class Traits, class Alloc> microc::basic_string<CharT,Traits,Alloc>
     operator+(const microc::basic_string<CharT,Traits,Alloc>& lhs,
               const microc::basic_string<CharT,Traits,Alloc>& rhs) {
