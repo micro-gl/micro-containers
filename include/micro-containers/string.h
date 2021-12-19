@@ -878,4 +878,71 @@ namespace microc {
         str_t str(microc::traits::move(rhs)); str.insert(str.begin(), lhs); return str;
     }
 
+    template<class Integer=long>
+    Integer __cstr_to_integral(const char *str, char **str_end=nullptr, unsigned char base=10) {
+        using size_type = microc::size_t;
+        Integer sign = 1;
+        // find start, skip white spaces
+        for(; *str==' '; ++str) {}
+        // resolve sign if any, do it with fail safe for unsigned types
+        if(*str=='-') { if(Integer(-1)<sign) sign=-1; str++; }
+        else if(*str=='+') { str++; }
+        // resolve base if any
+        if((base==16 or base==0) and
+                (*str=='0' and (*(str+1)=='x' or *(str+1)=='X'))) { base=16; str+=2; }
+        else if((base==2 or base==0) and
+                (*str=='0' and (*(str+1)=='b' or *(str+1)=='B'))) { base=2; str+=2; }
+        else if((base==8 or base==0) and *str=='0') { base=8; str++; }
+        else if(base==0) base=10;
+        // find end
+        const Integer nopos = base;
+        const auto c2n = [nopos](char ch) -> Integer {
+            // returns [0, base) for valid, or base for invalid
+            Integer r = ch;
+            if(ch>='0' and ch<='9') return r - Integer('0');
+            else if(ch>='a' and ch<='z') return r - Integer('a') + 10;
+            else if(ch>='A' and ch<='Z') return r - Integer('A') + 10;
+            return nopos;
+        };
+        const char * e = str;
+        for(; c2n(*e) < Integer(base); ++e) {}
+        *str_end=const_cast<char *>(e);
+        if(str==e) return 0;
+        // find length
+        const size_type len = e-str;
+        // start counting
+        Integer result = 0;
+        Integer mul = 1;
+        for(e-=1; e!=(str-1); --e, mul*=Integer(base)) {
+            result += mul*c2n(*e);
+        }
+        return result*sign;
+    }
+
+    long strtol(const char *str, char **str_end=nullptr, unsigned char base=10)
+    { return __cstr_to_integral<long>(str, str_end, base); }
+    long long strtoll(const char *str, char **str_end=nullptr, unsigned char base=10)
+    { return __cstr_to_integral<long long>(str, str_end, base); }
+    unsigned long strtoul(const char *str, char **str_end=nullptr, unsigned char base=10)
+    { return __cstr_to_integral<unsigned long>(str, str_end, base); }
+    unsigned long long strtoull(const char *str, char **str_end=nullptr, unsigned char base=10)
+    { return __cstr_to_integral<unsigned long long>(str, str_end, base); }
+
+    template<class Integer>
+    Integer __str_to_integer(const microc::string& str, microc::size_t* pos = nullptr, int base = 10) {
+        char * str_end;
+        auto res = __cstr_to_integral<Integer>(str.c_str(), &str_end, base);
+        if(pos) *pos = str_end - str.c_str();
+        return Integer(res);
+    }
+    int stoi(const microc::string& str, microc::size_t* pos = nullptr, int base = 10)
+    { return __str_to_integer<int>(str, pos, base); }
+    long stol(const microc::string& str, microc::size_t* pos = nullptr, int base = 10)
+    { return __str_to_integer<long>(str, pos, base); }
+    long long stoll(const microc::string& str, microc::size_t* pos = nullptr, int base = 10)
+    { return __str_to_integer<long long>(str, pos, base); }
+    unsigned long stoul(const microc::string& str, microc::size_t* pos = nullptr, int base = 10)
+    { return __str_to_integer<unsigned long>(str, pos, base); }
+    unsigned long long stoull(const microc::string& str, microc::size_t* pos = nullptr, int base = 10)
+    { return __str_to_integer<unsigned long long>(str, pos, base); }
 }

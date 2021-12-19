@@ -664,8 +664,42 @@ void test_compare_operator() {
     std::cout << "- s1==s2 -> " << (s1==s2) << std::endl;
 }
 
+void test_strtol() {
+    print_test_header("test_stoi");
+    char a ='0';
+    char a1 ='a';
+    char a2 ='a';
+    const char * number1 = "543";
+    const char * number2 = "0xFF";
+    const char * number3 = "0xFFFF";
+    const char * number4 = "0xF1";
+    const char * number5 = "0b111";
+    std::cout << "- string = " << number1 << ", number = " << microc::strtol(number1, nullptr) << std::endl;
+    std::cout << "- string = " << number2 << ", number = " << microc::strtol(number2, nullptr, 0) << std::endl;
+    std::cout << "- string = " << number3 << ", number = " << microc::strtol(number3, nullptr, 0) << std::endl;
+    std::cout << "- string = " << number4 << ", number = " << microc::strtol(number4, nullptr, 0) << std::endl;
+    std::cout << "- string = " << number5 << ", number = " << microc::strtol(number5, nullptr, 0) << std::endl;
+}
+
+void test_stoi_l_ll() {
+    print_test_header("test_stoi_l_ll");
+    char a ='0';
+    char a1 ='a';
+    char a2 ='a';
+    string number1 = "-543";
+    string number2 = "-0xFF";
+    string number3 = "0xFFFF";
+    string number4 = "+0xF1";
+    string number5 = "-0b111";
+    std::cout << "- string = " << number1.c_str() << ", number = " << microc::stoi(number1, nullptr) << std::endl;
+    std::cout << "- string = " << number2.c_str() << ", number = " << microc::stoi(number2, nullptr, 0) << std::endl;
+    std::cout << "- string = " << number3.c_str() << ", number = " << microc::stoi(number3, nullptr, 0) << std::endl;
+    std::cout << "- string = " << number4.c_str() << ", number = " << microc::stoi(number4, nullptr, 0) << std::endl;
+    std::cout << "- string = " << number5.c_str() << ", number = " << microc::stoi(number5, nullptr, 0) << std::endl;
+}
+
 int main() {
-    test_compare_operator();
+    test_stoi_l_ll();
 
     return 0;
     // Operations
@@ -708,5 +742,7 @@ int main() {
     test_concat_operator_plus();
     test_compare_operator();
 
+    // stoi
+    test_strtol();
 }
 
