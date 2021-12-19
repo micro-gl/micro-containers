@@ -964,6 +964,10 @@ namespace microc {
         u16string::size_type operator()(const u16string & s) const noexcept
         { return __simple_hash_cstr<u16string::value_type, u16string::size_type>(s.c_str(), s.size()); }
     };
+    template<> struct hash<u8string> {
+        u8string::size_type operator()(const u8string & s) const noexcept
+        { return __simple_hash_cstr<u8string::value_type, u8string::size_type>(s.c_str(), s.size()); }
+    };
     template<> struct hash<u32string> {
         u32string::size_type operator()(const u32string & s) const noexcept
         { return __simple_hash_cstr<u32string::value_type, u32string::size_type>(s.c_str(), s.size()); }
