@@ -11,6 +11,7 @@
 #pragma once
 
 #include "traits.h"
+#include <cmath>
 
 namespace microc {
 
@@ -609,7 +610,6 @@ namespace microc {
             // Finds the last substring equal to the range [s, s+count) in [_data+0, _data+pos]
             if(count==0 or count>size()) return npos;
             pos = minnnn(pos, size()-1);
-//            if(pos+count>size()) pos = size()-count;
             auto counter = count;
             for (size_type ix = pos+1; ix; --ix, counter=count) {
                 for (size_type jx = 0; jx < count ; ++jx) {
@@ -972,4 +972,55 @@ namespace microc {
         u32string::size_type operator()(const u32string & s) const noexcept
         { return __simple_hash_cstr<u32string::value_type, u32string::size_type>(s.c_str(), s.size()); }
     };
+
+    microc::string to_string(float fVal) {
+        // a very naive float to string
+        const int BUFF_SIZE=40;
+        char storage[BUFF_SIZE] = {0};
+        int dVal, dec;
+        char * it = storage-1;
+        const float sign = fVal < 0 ? -1.0f : 1.0f;
+        dVal = fVal = fVal < 0 ? -fVal : fVal;
+
+        int max_digits_dec = 7;
+        {
+            int mod = 1;
+            for (int ix = 0; ix < max_digits_dec; ++ix, mod*=10) {}
+            dec = (int)(fVal * float(mod)) % mod;
+            bool encountered_non_zero=false;
+            for (int ix = 0; ix < max_digits_dec; ++ix, dec/=10, --it) {
+                *it = (dec % 10) + '0';
+                // replace trailing '0' with null-terminating char 0
+                if(ix+1!=max_digits_dec and *it=='0' and
+                        !encountered_non_zero) *it=0;
+                else encountered_non_zero=true;
+            }
+            *(it--) = '.';
+        }
+        if(dVal==0) *(it--) = '0';
+        else for(; dVal!=0;  dVal/=10, --it) { *it = (dVal%10) + '0'; }
+        if(sign<0) *(it--) = '-';
+        const char * r = it+1;
+        return microc::string(r, storage-r);
+    }
+
+    template<class int_t>
+    microc::string to_string(int_t val) {
+        constexpr char SZ = sizeof (val);
+        constexpr int BUFF_SIZE=SZ==1 ? 4 : (SZ==2 ? 6 : (SZ==4 ? 11 : 22));
+        char storage[BUFF_SIZE] = {0};
+        char * it = storage-1;
+        const int_t sign = val < 0 ? -1 : 1;
+        int_t dVal = val < 0 ? -val : val;
+        if(dVal==0) *it-- = '0';
+        else {
+            while (dVal) {
+                *it-- = (dVal % 10) + '0';
+                dVal /= 10;
+            }
+        }
+        if(val<0) *it-- = '-';
+        const char * r = it+1;
+        return microc::string(r, storage-r);
+    }
 }

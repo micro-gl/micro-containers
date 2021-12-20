@@ -712,8 +712,20 @@ void test_hash() {
     std::cout << microc::hash<string>{}(s4) << '\n';
 }
 
+void test_to_string() {
+    print_test_header("test_to_string");
+
+    for (const float f : {23.01, 1e-9, -50.05})
+        std::cout << "std::cout: " << f << '\n'
+                  << "to_string: " << microc::to_string(f).c_str() << "\n\n";
+
+    for (const int f : {23, -23, 12345})
+        std::cout << "std::cout: " << f << '\n'
+                  << "to_string: " << microc::to_string(f).c_str() << "\n\n";
+}
+
 int main() {
-    test_hash();
+    test_to_string();
 
     return 0;
     // Operations

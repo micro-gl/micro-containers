@@ -1,5 +1,7 @@
 - span
-- string
+- string : 
+  - to_string
+  - basic_string_view
 - initializer_list constructed from array
 - 
 - design some algorithms like for_each, range, etc...
