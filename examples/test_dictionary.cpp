@@ -126,7 +126,7 @@ void test_erase_with_key() {
     print_dictionary(d);
     //
 
-//    d.erase(250);
+    d.erase(250);
 //    d.erase(450);
     d.erase(450);
 
@@ -149,7 +149,7 @@ void test_erase_with_range_iterator() {
     std::cout << "- dictionary" << std::endl;
     print_dictionary(d);
     //
-    d.erase(d.begin(), d.begin());
+    d.erase(d.begin(), ++d.begin());
 //    d.erase(d.begin(), ++d.begin());
     std::cout << "- after erase" << std::endl;
     print_dictionary(d);

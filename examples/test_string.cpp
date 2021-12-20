@@ -1,4 +1,4 @@
-#define MICRO_CONTAINERS_ENABLE_THROW
+//#define MICRO_CONTAINERS_ENABLE_THROW
 #include "src/test_utils.h"
 #include <micro-containers/string.h>
 #include <micro-containers/algorithm.h>
@@ -185,6 +185,7 @@ void test_substr() {
     // string sub4 = a.substr(17, 3);
     // since a.size() == 20, pos == a.size()-3 == 17, and a.size()-pos == 3
 
+#ifdef MICRO_CONTAINERS_ENABLE_THROW
     try {
         // pos is out of bounds, throws
         string sub5 = a.substr(a.size()+3, 50);
@@ -192,6 +193,7 @@ void test_substr() {
     } catch(string::out_of_bounds_exception) {
         std::cout << "pos exceeds string size\n";
     }
+#endif
 }
 
 void test_copy() {
@@ -665,7 +667,7 @@ void test_compare_operator() {
 }
 
 void test_strtol() {
-    print_test_header("test_stoi");
+    print_test_header("test_strtol");
     char a ='0';
     char a1 ='a';
     char a2 ='a';
@@ -715,7 +717,7 @@ void test_hash() {
 void test_to_string() {
     print_test_header("test_to_string");
 
-    for (const float f : {23.01, 1e-9, -50.05})
+    for (const float f : {23.01f, -50.05f})
         std::cout << "std::cout: " << f << '\n'
                   << "to_string: " << microc::to_string(f).c_str() << "\n\n";
 
@@ -726,8 +728,8 @@ void test_to_string() {
 
 int main() {
     test_to_string();
+    return 0 ;
 
-    return 0;
     // Operations
 
     test_clear();
@@ -772,6 +774,7 @@ int main() {
 
     test_strtol();
     test_stoi_l_ll();
+    test_to_string();
 
     // Hash
     test_hash();

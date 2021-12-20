@@ -82,6 +82,279 @@ namespace microc {
             public __common_char_traits<char32_t, unsigned int, microc::size_t, void, void, 0xFFFFFFFF> {};
 
     /**
+     * Basic String View
+     * @tparam CharT The type for a character
+     * @tparam Traits The implementation of basic character operations
+     */
+    template<class CharT, class Traits = microc::char_traits<CharT>>
+    class basic_string_view {
+    public:
+        using traits_type = Traits;
+        using value_type = CharT;
+        using size_type = microc::size_t;
+        using difference_type = microc::ptrdiff_t;
+        using reference = value_type &;
+        using const_reference = const value_type &;
+        using pointer = value_type *;
+        using const_pointer = const value_type *;
+        using iterator = pointer;
+        using const_iterator = const_pointer;
+        static const size_type npos = ~size_type(0);
+        struct out_of_bounds_exception {};
+#define minnnn(a,b) ((a)<(b) ? (a) : (b))
+    private:
+        void throw_out_of_bounds_exception_if_can() const {
+#ifdef MICRO_CONTAINERS_ENABLE_THROW
+            throw out_of_bounds_exception();
+#endif
+        }
+        value_type * _data;
+        size_type _current;
+        static CharT _null_char;
+
+    public:
+        // ctors
+        explicit basic_string_view() noexcept : _data(nullptr), _current(0) {};
+        basic_string_view(const basic_string_view& other) noexcept = default;
+        basic_string_view(const CharT* s, size_type count) : _data(s), _current(count) {}
+        basic_string_view(const CharT* s) : basic_string_view(s, traits_type::length(s)) {}
+        ~basic_string_view() = default;
+
+        // Iterators
+        const_iterator begin() const noexcept {return _data;}
+        const_iterator end() const noexcept {return _data + size();}
+        iterator begin() noexcept {return _data;}
+        iterator end()  noexcept {return _data + size();}
+
+        // Element access
+        reference operator[](size_type i) { return _data[i]; }
+        const_reference operator[](size_type i) const { return _data[i]; }
+        reference at(size_type pos) {
+            if(pos>=0 && pos < size()) return _data[pos];
+            throw_out_of_bounds_exception_if_can();
+        }
+        const_reference at(size_type pos) const {
+            if(pos>=0 && pos < size()) return _data[pos];
+            throw_out_of_bounds_exception_if_can();
+        }
+        CharT* data() noexcept { return size() ? _data : &_null_char; }
+        const CharT* data() const noexcept { return size() ? _data : &_null_char;; }
+        const CharT* c_str() const noexcept { return data(); }
+        reference back() { return _data[_current-1]; }
+        reference front() { return _data[0]; }
+        const_reference back() const { return _data[_current-1]; }
+        const_reference front() const { return _data[0]; }
+
+        // Capacity
+        bool empty() noexcept { return _current==0; }
+        size_type size() const noexcept { return _current; }
+        size_type length() const noexcept { return _current; }
+
+        // Assignment
+        basic_string_view& operator=(const basic_string_view& view) noexcept = default;
+
+        // soft modifiers
+        void remove_prefix(size_type n) { _data += n; }
+        void remove_suffix(size_type n) { _current -= n; }
+
+        basic_string_view substr(size_type pos = 0, size_type count = npos) const {
+            if(pos>size()) throw_out_of_bounds_exception_if_can();
+            count = minnnn(count, size()-pos);
+            return basic_string_view(_data+pos, count);
+        }
+        size_type copy(CharT* dest, size_type count, size_type pos = 0) const {
+            if(pos>size()) throw_out_of_bounds_exception_if_can();
+            count = minnnn(count, size()-pos);
+            traits_type::copy(dest, _data + pos, count);
+            return count;
+        }
+
+        // query/search operations
+        size_type find(const CharT* s, size_type pos, size_type count) const {
+            // Finds the first substring equal to the range [s, s+count) in [_data+pos, _data+size())
+            if((pos+count)>size() or (count==0)) return npos;
+            auto counter = count;
+            for (size_type ix = pos; ix < size() - count + 1 ; ++ix, counter=count) {
+                for (size_type jx = 0; jx < count ; ++jx) {
+                    const auto & a = *(_data + ix + jx);
+                    const auto & b = *(s + jx);
+                    counter -= traits_type::eq(a, b) ? 1 : 0;
+                }
+                if(counter==0) return ix;
+            }
+            return npos;
+        }
+        size_type find(basic_string_view v, size_type pos = 0) const noexcept
+        { return find(v.data(), pos, v.size()); }
+        size_type find(const CharT* s, size_type pos = 0) const
+        { return find(s, pos, traits_type::length(s)); }
+        size_type find(CharT ch, size_type pos = 0) const { return find(&ch, pos, 1); }
+        size_type rfind(const CharT* s, size_type pos, size_type count) const {
+            // Finds the last substring equal to the range [s, s+count) in [_data+0, _data+pos]
+            if(count==0 or count>size()) return npos;
+            pos = minnnn(pos, size()-1);
+            auto counter = count;
+            for (size_type ix = pos+1; ix; --ix, counter=count) {
+                for (size_type jx = 0; jx < count ; ++jx) {
+                    const auto & a = *(_data + (ix-1) + jx);
+                    const auto & b = *(s + jx);
+                    counter -= traits_type::eq(a, b) ? 1 : 0;
+                }
+                if(counter==0) return ix-1;
+            }
+            return npos;
+        }
+        size_type rfind(basic_string_view v, size_type pos = npos) const noexcept
+        { return rfind(v.data(), pos, v.size()); }
+        size_type rfind(const CharT* s, size_type pos = npos) const
+        { return rfind(s, pos, traits_type::length(s)); }
+        size_type rfind(CharT ch, size_type pos = npos) const { return rfind(&ch, pos, 1); }
+
+        bool contains(basic_string_view sv) const { return find(sv, 0) != npos; }
+        bool contains(const CharT* s) const { return find(s) != npos; }
+        bool contains(CharT c) const noexcept { return find(c) != npos; }
+
+        bool starts_with(CharT c) const noexcept { return find(c)==0; }
+        bool starts_with(const CharT* s) const { return find(s)==0; }
+        bool starts_with(basic_string_view sv) const { return find(sv, 0)==0; }
+        bool ends_with(basic_string_view sv) const {
+            if(sv.size()>size()) return false;
+            const auto pos = size()-sv.size();
+            return find(sv, pos)==pos;
+        }
+        bool ends_with(CharT c) const noexcept { return find(c, size()-1)==size()-1; }
+        bool ends_with(const CharT* s) const {
+            const auto str_len = traits_type::length(s);
+            if(str_len>size()) return false;
+            return find(s, size()-str_len, str_len)==size()-str_len;
+        }
+
+        int compare(size_type pos1, size_type count1, const CharT* s, size_type count2) const {
+            // Compares a [pos1, pos1+count1) substring of this string to the characters in the
+            // range [s, s + count2). If count1 > size() - pos1 the substring is [pos1, size()).
+            // (Note: the characters in the range [s, s + count2) may include null characters.)
+            size_type sz = size();
+            if (pos1 > sz || count2 == npos) {
+                throw_out_of_bounds_exception_if_can();
+                return 2;
+            }
+            size_type rlen = minnnn(count1, sz - pos1);
+            int r = traits_type::compare(data() + pos1, s, minnnn(rlen, count2));
+            if (r == 0) {
+                if (rlen < count2) r=-1;
+                else if (rlen > count2) r=1;
+            }
+            return r;
+        }
+        int compare(size_type pos1, size_type count1, const CharT* s) const
+        { return compare(pos1, count1, s, traits_type::length(s)); }
+        int compare(const CharT* s) const {
+            auto len = traits_type::length(s);
+            return compare(0, len, s, len);
+        }
+        int compare(size_type pos1, size_type count1, basic_string_view v,
+                    size_type pos2, size_type count2 = npos ) const {
+            count2 = minnnn(count2, v.size()-pos2);
+            return compare(pos1, count1, v.data()+pos2, count2);
+        }
+        int compare(size_type pos1, size_type count1, basic_string_view v) const
+        { return compare(pos1, count1, v.data(), v.size()); }
+        int compare(basic_string_view v) const noexcept
+        { return compare(0, size(), v.data(), v.size()); }
+        // find_first_of
+        size_type find_first_of(const CharT* s, size_type pos, size_type count) const {
+            for(size_type ix = pos; ix < size(); ++ix)
+                for(size_type jx = 0; jx < count; ++jx)
+                    if(traits_type::eq(*(_data+ix), *(s+jx))) return ix;
+            return npos;
+        }
+        size_type find_first_of(const CharT* s, size_type pos = 0) const
+        { return find_first_of(s, pos, traits_type::length(s)); }
+        size_type find_first_of(CharT ch, size_type pos = 0) const
+        { return find_first_of(&ch, pos, 1); }
+        size_type find_first_of(basic_string_view v, size_type pos = 0) const
+        { return find_first_of(v.data(), pos, v.size()); }
+        // find_last_of
+        size_type find_last_of(const CharT* s, size_type pos, size_type count) const {
+            pos=minnnn(pos, size()-1);
+            for(size_type ix = pos+1; ix; --ix)
+                for(size_type jx = 0; jx < count; ++jx)
+                    if(traits_type::eq(*(_data+ix-1), *(s+jx))) return (ix-1);
+            return npos;
+        }
+        size_type find_last_of(const CharT* s, size_type pos = npos) const
+        { return find_last_of(s, pos, traits_type::length(s)); }
+        size_type find_last_of(CharT ch, size_type pos = npos) const
+        { return find_last_of(&ch, pos, 1); }
+        size_type find_last_of(basic_string_view v, size_type pos = npos) const
+        { return find_last_of(v.data(), pos, v.size()); }
+        // find_first_not_of
+        size_type find_first_not_of(const CharT* s, size_type pos, size_type count) const {
+            for(size_type ix = pos; ix < size(); ++ix) {
+                bool found = true;
+                for (size_type jx = 0; jx < count; ++jx)
+                    if (traits_type::eq(*(_data + ix), *(s + jx))) {
+                        found=false;break;
+                    }
+                if(found) return ix;
+            }
+            return npos;
+        }
+        size_type find_first_not_of(const CharT* s, size_type pos = 0) const
+        { return find_first_not_of(s, pos, traits_type::length(s)); }
+        size_type find_first_not_of(basic_string_view v, size_type pos = 0) const
+        { return find_first_not_of(v.data(), pos, v.size()); }
+        size_type find_first_not_of(CharT ch, size_type pos = 0) const
+        { return find_first_not_of(&ch, pos, 1); }
+        // find_last_not_of
+        size_type find_last_not_of(const CharT* s, size_type pos, size_type count) const {
+            // Finds the last character equal to none of the characters in the given character sequence.
+            // The search considers only the interval [0, pos]. If the character is not present in
+            // the interval, npos will be returned.
+            pos = minnnn(pos, size()-1);
+            for(size_type ix = pos+1; ix; --ix) {
+                bool found = true;
+                for (size_type jx = 0; jx < count; ++jx)
+                    if (traits_type::eq(*(_data + ix-1), *(s + jx))) {
+                        found=false;break;
+                    }
+                if(found) return ix-1;
+            }
+            return npos;
+        }
+        size_type find_last_not_of(const CharT* s, size_type pos = npos) const
+        { return find_last_not_of(s, pos, traits_type::length(s)); }
+        size_type find_last_not_of(basic_string_view v, size_type pos = npos) const
+        { return find_last_not_of(v.data(), pos, v.size()); }
+        size_type find_last_not_of(CharT ch, size_type pos = npos) const
+        { return find_last_not_of(&ch, pos, 1); }
+#undef minnnn
+    };
+
+    template<class CharT, class Traits>
+    CharT basic_string_view<CharT, Traits>::_null_char = CharT(0);
+
+    using string_view = basic_string_view<char, char_traits<char>>;
+    using u8string_view = basic_string_view<unsigned char, char_traits<unsigned char>>;
+    using u16string_view = basic_string_view<char16_t, char_traits<char16_t>>;
+    using u32string_view = basic_string_view<char32_t, char_traits<char32_t>>;
+
+    // outside equality compare operator
+    template<class CharT, class Traits>
+    bool operator==(const microc::basic_string_view<CharT, Traits>& lhs,
+                    const microc::basic_string_view<CharT, Traits>& rhs) {
+        if(lhs.size()!=rhs.size()) return false;
+        using size_type = typename microc::basic_string_view<CharT, Traits>::size_type;
+        using traits_type = typename microc::basic_string_view<CharT,Traits>::traits_type;
+        return traits_type::compare(lhs.c_str(), rhs.c_str(), lhs.size())==0;
+    }
+    template<class CharT, class Traits>
+    bool operator!=(const microc::basic_string_view<CharT, Traits>& lhs,
+                    const microc::basic_string_view<CharT, Traits>& rhs) {
+        return !(lhs==rhs);
+    }
+
+    /**
      * Basic String, Allocator-aware, but does not propagate allocators on copy/move.
      * @tparam CharT The type for a character
      * @tparam Traits The implementation of basic character operations
@@ -527,8 +800,8 @@ namespace microc {
         iterator erase(const_iterator first, const_iterator last) {
             difference_type last_index = last-begin();
             difference_type how_many_to_erase = last-first;
-            const_iterator dummy;
-            replace<const_iterator>(first, last, dummy, dummy);
+            CharT dummy = 0; const_iterator dummy_it = &dummy;
+            replace<const_iterator>(first, last, dummy_it, dummy_it);
             return begin() + last_index - how_many_to_erase;
         }
 
@@ -905,7 +1178,7 @@ namespace microc {
         };
         const char * e = str;
         for(; c2n(*e) < Integer(base); ++e) {}
-        *str_end=const_cast<char *>(e);
+        if(str_end) *str_end=const_cast<char *>(e);
         if(str==e) return 0;
         // find length
         const size_type len = e-str;
@@ -955,21 +1228,37 @@ namespace microc {
         return hash_code;
     }
 
-    template<> struct hash<string> {
-        string::size_type operator()(const string & s) const noexcept
-        { return __simple_hash_cstr<string::value_type, string::size_type>(s.c_str(), s.size()); }
+    template<> struct hash<microc::string> {
+        microc::string::size_type operator()(const microc::string & s) const noexcept
+        { return __simple_hash_cstr<microc::string::value_type, microc::string::size_type>(s.c_str(), s.size()); }
     };
-    template<> struct hash<u16string> {
-        u16string::size_type operator()(const u16string & s) const noexcept
-        { return __simple_hash_cstr<u16string::value_type, u16string::size_type>(s.c_str(), s.size()); }
+    template<> struct hash<microc::u16string> {
+        microc::u16string::size_type operator()(const microc::u16string & s) const noexcept
+        { return __simple_hash_cstr<microc::u16string::value_type, microc::u16string::size_type>(s.c_str(), s.size()); }
     };
-    template<> struct hash<u8string> {
-        u8string::size_type operator()(const u8string & s) const noexcept
-        { return __simple_hash_cstr<u8string::value_type, u8string::size_type>(s.c_str(), s.size()); }
+    template<> struct hash<microc::u8string> {
+        microc::u8string::size_type operator()(const microc::u8string & s) const noexcept
+        { return __simple_hash_cstr<microc::u8string::value_type, microc::u8string::size_type>(s.c_str(), s.size()); }
     };
-    template<> struct hash<u32string> {
-        u32string::size_type operator()(const u32string & s) const noexcept
-        { return __simple_hash_cstr<u32string::value_type, u32string::size_type>(s.c_str(), s.size()); }
+    template<> struct hash<microc::u32string> {
+        microc::u32string::size_type operator()(const microc::u32string & s) const noexcept
+        { return __simple_hash_cstr<microc::u32string::value_type, microc::u32string::size_type>(s.c_str(), s.size()); }
+    };
+    template<> struct hash<microc::string_view> {
+        microc::string_view::size_type operator()(microc::string_view s) const noexcept
+        { return __simple_hash_cstr<microc::string_view::value_type, microc::string_view::size_type>(s.c_str(), s.size()); }
+    };
+    template<> struct hash<microc::u16string_view> {
+        microc::u16string_view::size_type operator()(microc::u16string_view s) const noexcept
+        { return __simple_hash_cstr<microc::u16string_view::value_type, microc::u16string_view::size_type>(s.c_str(), s.size()); }
+    };
+    template<> struct hash<microc::u8string_view> {
+        microc::u8string_view::size_type operator()(microc::u8string_view s) const noexcept
+        { return __simple_hash_cstr<microc::u8string_view::value_type, microc::u8string_view::size_type>(s.c_str(), s.size()); }
+    };
+    template<> struct hash<microc::u32string_view> {
+        microc::u32string_view::size_type operator()(microc::u32string_view s) const noexcept
+        { return __simple_hash_cstr<microc::u32string_view::value_type, microc::u32string_view::size_type>(s.c_str(), s.size()); }
     };
 
     microc::string to_string(float fVal) {
