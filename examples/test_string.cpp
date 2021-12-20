@@ -4,7 +4,6 @@
 #include <micro-containers/algorithm.h>
 
 using namespace microc;
-#include <string>
 
 void print_string(const string & str) {
     std::cout << str.c_str() << std::endl;

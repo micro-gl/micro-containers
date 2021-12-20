@@ -199,4 +199,28 @@ namespace microc {
     template <class _Cp>
     auto end(const _Cp& __c) -> decltype(__c.end()) { return __c.end(); }
 
+    template<class InputIt, class UnaryFunction>
+    UnaryFunction for_each(InputIt first, InputIt last, UnaryFunction f) {
+        for (; first != last; ++first) { f(*first); }
+        return f; // implicit move since C++11
+    }
+
+    template<class InputIt, class Size, class UnaryFunction>
+    InputIt for_each_n(InputIt first, Size n, UnaryFunction f) {
+        for (Size i = 0; i < n; ++first, (void) ++i) { f(*first); }
+        return first;
+    }
+
+    template<class InputIt, class OutputIt, class UnaryOperation>
+    OutputIt transform(InputIt first1, InputIt last1, OutputIt d_first, UnaryOperation unary_op) {
+        while (first1 != last1) { *d_first++ = unary_op(*first1++); }
+        return d_first;
+    }
+
+    template<class InputIt1, class InputIt2, class OutputIt, class BinaryOperation>
+    OutputIt transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
+                       OutputIt d_first, BinaryOperation binary_op ) {
+        while (first1 != last1) { *d_first++ = binary_op(*first1++, *first2++); }
+        return d_first;
+    }
 }

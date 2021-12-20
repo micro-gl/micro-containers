@@ -6,7 +6,7 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 
 ## Introduction
 #### Sequence Containers
-* basic_string, string, u8string, u16string, 32string
+* string/string_view, u8string/u8string_view, u16string/u16string_view, 32string/32string_view, basic_string/basic_string_view
 * array
 * static_array
 * dynamic_array
@@ -34,6 +34,8 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 #### Algorithms
 - make_heap, is_heap, push_heap, pop_heap, sort_heap
 - find, find_if, find_if_not
+- for_each, for_each_n
+- transform
 
 
 ## Installing `micro{containers}`
