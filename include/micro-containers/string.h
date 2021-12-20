@@ -11,7 +11,6 @@
 #pragma once
 
 #include "traits.h"
-#include <cmath>
 
 namespace microc {
 
