@@ -201,9 +201,9 @@ namespace microc {
             if(size() >= capacity()) {
                 // copy the value, edge case if v belongs
                 // to the dynamic array
-                T vv = microc::traits::forward<TT>(v); // copy-or-move ctor
+                auto vv = microc::traits::forward<TT>(v); // copy-or-move ctor
                 alloc_(true);
-                ::new(_data + _current++, microc_new::blah) T(microc::traits::move<TT>(vv));
+                ::new(_data + _current++, microc_new::blah) T(microc::traits::move(vv));
             } else ::new(_data + _current++, microc_new::blah) T(microc::traits::forward<TT>(v));;
         }
         template<class TT>
@@ -223,7 +223,9 @@ namespace microc {
 
     public:
         void push_back(const T & v) noexcept { internal_push_back(v); }
-        void push_back(T && v) noexcept { internal_push_back(v); }
+        void push_back(T && v) noexcept {
+            internal_push_back(microc::traits::move(v));
+        }
         void pop_back() {
             if(size()==0) return;
             _data[_current--].~T();

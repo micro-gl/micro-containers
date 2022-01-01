@@ -7,6 +7,7 @@ void test_insert() {
     print_test_header("test_insert");
 
     using c = dynamic_array<int>;
+
     c vec(3, 100);
     std::cout << "\n- vec(3, 100) \n";
     print_simple_container(vec);
@@ -108,7 +109,18 @@ void test_resize() {
 }
 
 
+void test_dummy() {
+    print_test_header("test_insert");
+
+    using c = dynamic_array<dummy_t>;
+    dummy_t a;
+    c vec;
+    vec.push_back(dummy_t());
+    vec.push_back(a);
+}
+
 int main() {
+    test_dummy();
     // modifiers
     test_insert();
     test_erase();

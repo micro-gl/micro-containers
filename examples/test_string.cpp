@@ -724,6 +724,7 @@ void test_to_string() {
         std::cout << "std::cout: " << f << '\n'
                   << "to_string: " << microc::to_string(f).c_str() << "\n\n";
 }
+#include <OpenGL/gl3.h>
 
 int main() {
     test_to_string();
