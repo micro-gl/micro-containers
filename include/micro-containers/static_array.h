@@ -64,7 +64,7 @@ namespace microc {
      * NOT equivalent to std::array, but with some mods:
      * 1. Contains FAKE allocator interface, so it can be compatible with many allocator-aware algorithms.
      * 2. you can push to back
-     * 2. 3 all elements are destructed at construction
+     * 3. all elements are destructed at construction
      *
      * @tparam T item type
      * @tparam N the fixed capacity

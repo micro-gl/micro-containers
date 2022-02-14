@@ -110,7 +110,10 @@ namespace microc {
         }
         value_type * _data;
         size_type _current;
-        static CharT _null_char;
+        static const CharT * null_char() {
+            static const CharT null = 0;
+            return &null;
+        }
 
     public:
         // ctors
@@ -137,8 +140,8 @@ namespace microc {
             if(pos>=0 && pos < size()) return _data[pos];
             throw_out_of_bounds_exception_if_can();
         }
-        CharT* data() noexcept { return size() ? _data : &_null_char; }
-        const CharT* data() const noexcept { return size() ? _data : &_null_char;; }
+        CharT* data() noexcept { return size() ? _data : null_char(); }
+        const CharT* data() const noexcept { return size() ? _data : null_char(); }
         const CharT* c_str() const noexcept { return data(); }
         reference back() { return _data[_current-1]; }
         reference front() { return _data[0]; }
@@ -331,9 +334,6 @@ namespace microc {
 #undef minnnn
     };
 
-    template<class CharT, class Traits>
-    CharT basic_string_view<CharT, Traits>::_null_char = CharT(0);
-
     using string_view = basic_string_view<char, char_traits<char>>;
     using u8string_view = basic_string_view<unsigned char, char_traits<unsigned char>>;
     using u16string_view = basic_string_view<char16_t, char_traits<char16_t>>;
@@ -401,7 +401,11 @@ namespace microc {
         rebind_allocator_type _alloc;
         size_type _cap;
         size_type _current;
-        static CharT _null_char;
+
+        static CharT * null_char() {
+            static CharT null = 0;
+            return &null;
+        }
 
     public:
         // ctors
@@ -473,8 +477,8 @@ namespace microc {
             if(pos>=0 && pos < size()) return _data[pos];
             throw_out_of_bounds_exception_if_can();
         }
-        CharT* data() noexcept { return size() ? _data : &_null_char; }
-        const CharT* data() const noexcept { return size() ? _data : &_null_char;; }
+        CharT* data() noexcept { return size() ? _data : null_char(); }
+        const CharT* data() const noexcept { return size() ? _data : null_char();; }
         const CharT* c_str() const noexcept { return data(); }
         reference back() { return _data[_current-1]; }
         reference front() { return _data[0]; }
@@ -1020,9 +1024,6 @@ namespace microc {
 
 #undef minnnn
     };
-
-    template<class CharT, class Traits, class Allocator>
-    CharT basic_string<CharT, Traits, Allocator>::_null_char = CharT(0);
 
     using string = basic_string<char, char_traits<char>, microc::std_allocator<char>>;
     using u8string = basic_string<unsigned char, char_traits<unsigned char>, microc::std_allocator<unsigned char>>;
