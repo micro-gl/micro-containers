@@ -495,6 +495,7 @@ namespace microc {
             node_query q = internal_insert_node(node);
             return pair<iterator, bool>(iterator(q.node, q.bucket_index, this), true);
         }
+
     private:
         template<class A, class B>
         using match_t = microc::traits::enable_if_t<
@@ -504,6 +505,7 @@ namespace microc {
         using non_match_t = microc::traits::enable_if_t<
                 !microc::traits::is_same<A,
                         microc::traits::remove_reference_t<B>>::value, bool>;
+
     public:
         template<class InputIt, typename Non_Key = non_match_t<Key, InputIt>>
         void insert(InputIt first, InputIt last) {

@@ -21,6 +21,7 @@ set(SOURCES
         test_dictionary.cpp
         test_ordered_set.cpp
         test_hash_map.cpp
+        test_array_map_robin.cpp
         test_hash_set.cpp
         test_array.cpp
         test_static_array.cpp
