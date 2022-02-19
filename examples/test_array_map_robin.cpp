@@ -5,42 +5,7 @@ using namespace microc;
 
 template<class Container>
 void print_array_map_robin(const Container & container) {
-    std::cout << "(";
-    for (const auto & item : container) {
-        std::cout << to_string(item, true) << ", ";
-    }
-    std::cout << ")" << std::endl;
-}
-
-template<class Key, class T, class Hash, class Allocator>
-void print_array_map_robin_bucket(const array_map_robin<Key, T, Hash, Allocator> & c,
-                           const unsigned bucket_index) {
-    using bucket_t = const typename array_map_robin<Key, T, Hash, Allocator>::bucket_type &;
-    const auto & bucket = c.bucket_node(bucket_index);
-    std::cout << " == bucket #" << bucket_index << " has "
-              << c.bucket_size(bucket_index) << " items ==" << std::endl;
-    const auto * node_head = bucket.list;
-    std::cout << "(";
-    while(node_head) {
-        std::cout << to_string(node_head->key_value, true) << ", ";
-        node_head = node_head->next;
-    }
-    std::cout << ")";
-}
-
-template<class Key, class T, class Hash, class Allocator>
-void print_array_map_robin_info(const array_map_robin<Key, T, Hash, Allocator> & c) {
-    std::cout << "== HASH-MAP INFO ==" << std::endl;
-    std::cout << " -- " << c.size() << " items in " << c.bucket_count() << " buckets";
-    std::cout << " -- load factor="  << c.load_factor();
-    std::cout << " -- max load factor="  << c.max_load_factor() << std::endl;
-    std::cout << "** Buckets Info" << std::endl;
-
-    for (unsigned ix = 0; ix < c.bucket_count(); ix++) {
-        print_array_map_robin_bucket(c, ix);
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
+    container.print(1);
 }
 
 void test_emplace() {
@@ -242,7 +207,7 @@ void test_contains() {
     print_array_map_robin(d);
 
     for (const auto & item : d) {
-        std::cout << "- does map internal_contains " << to_string(item.first)
+        std::cout << "- does map contains " << to_string(item.first)
                   << " ? " << d.contains(item.first) << std::endl;
     }
 
@@ -370,11 +335,11 @@ void test_rehash() {
     d1.insert(5, 450);
     d1.insert(6, 450);
 
-    print_array_map_robin_info(d1);
+    print_array_map_robin(d1);
 
-    d1.max_load_factor(3.0f);
-    d1.rehash(2);
-    print_array_map_robin_info(d1);
+//    d1.max_load_factor(0.1f);
+    d1.rehash(32);
+    print_array_map_robin(d1);
 }
 
 void test_rehash_2() {
@@ -383,17 +348,17 @@ void test_rehash_2() {
     using map = array_map_robin<int, int>;
     map d1(1);
     d1.insert(1, 50);
-    print_array_map_robin_info(d1);
+    print_array_map_robin(d1);
     d1.insert(2, 150);
-    print_array_map_robin_info(d1);
+    print_array_map_robin(d1);
     d1.insert(3, 250);
-    print_array_map_robin_info(d1);
+    print_array_map_robin(d1);
     d1.insert(4, 350);
-    print_array_map_robin_info(d1);
+    print_array_map_robin(d1);
     d1.insert(5, 450);
-    print_array_map_robin_info(d1);
+    print_array_map_robin(d1);
     d1.insert(6, 450);
-    print_array_map_robin_info(d1);
+    print_array_map_robin(d1);
 
 //    d1.max_load_factor(3.0f);
 //    d1.rehash(2);
@@ -426,7 +391,7 @@ int main() {
     test_copy_and_move_ctor();
     test_copy_and_move_assign();
 //
-//    test_rehash();
-    test_rehash_2();
+    test_rehash();
+//    test_rehash_2();
 }
 

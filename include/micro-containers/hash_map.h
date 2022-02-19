@@ -313,7 +313,8 @@ namespace microc {
             // destruct and deallocate old bucket
             for (size_type ix = 0; ix < old_buckets_count; ++ix)
                 old_buckets[ix].~bucket_t();
-            _alloc_bucket.deallocate(old_buckets);
+            if(old_buckets)
+                _alloc_bucket.deallocate(old_buckets);
             // assign new bucket info
             _buckets = new_buckets;
             _bucket_count = new_buckets_count;

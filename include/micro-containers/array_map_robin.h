@@ -92,17 +92,17 @@ namespace microc {
                 _i=_c->internal_prev_used(_i-1); return *this;
             }
             iterator_t operator+(size_type val) {
-//                node_query q(_n, _bi);
-//                for (size_type ix = 0; ix < val; ++ix)
-//                    q = _c->internal_node_successor(q.node, q.bucket_index);
-                return iterator_t(0, _c);
+                size_type pos = _i;
+                for (size_type ix = 0; ix < val; ++ix)
+                    pos = _c->internal_next_used(pos+1);
+                return iterator_t(pos, _c);
             }
             iterator_t operator++(int) { iterator_t ret(_i, _c); ++(*this); return ret; }
             iterator_t operator--(int) { iterator_t ret(_i, _c); --(*this); return ret; }
             bool operator==(iterator_t o) const { return _i==o._i; }
             bool operator!=(iterator_t o) const { return !(*this==o); }
-            value_reference_type operator*() const { return (*ncn(_c))._kvs[_i].key_value; }
-            pointer operator->() const { return &(*this); }
+            value_reference_type operator*() const { return (*ncn(_c))._kvs[_i]; }
+            pointer operator->() const { return &(*ncn(_c))._kvs[_i]; }
         };
 
     public:
@@ -114,7 +114,7 @@ namespace microc {
         static constexpr size_type DEFAULT_BUCKET_COUNT = size_type(1)<<4;
 
     private:
-        bool is_free(size_type idx) {
+        bool is_free(size_type idx) const {
             return _stats[idx]==0;
         }
         Key & key_of(size_type idx) const {
@@ -137,12 +137,12 @@ namespace microc {
         }
         size_type internal_next_used(size_type start) const {
             for (size_type ix = start; ix < capacity(); ++ix)
-                if(_stats[ix]==0) return ix;
+                if(_stats[ix]==1) return ix;
             return capacity();
         }
         size_type internal_prev_used(size_type start) const {
             for (size_type ix = start+1; ix; --ix)
-                if(_stats[ix-1]==0) return (ix-1);
+                if(_stats[ix-1]==1) return (ix-1);
             return capacity();
         }
         inline int k2p(const Key & key) const {
@@ -167,7 +167,7 @@ namespace microc {
                 auto pos = mod(step + start); // modulo
                 const auto _is_free = is_free(pos);
                 if (_is_free) return capacity(); // important that this is first
-                if (_kvs[pos] == key) return pos; // found the item with high probability
+                if (key_of(pos) == key) return pos; // found the item with high probability
                 if (distance_to_home_of(key, pos) < step) {
                     // early stop detection, we found a non-free, that was closer to home,
                     return capacity();
@@ -187,14 +187,14 @@ namespace microc {
     public:
         // iterators
         iterator begin() noexcept {
-            return iterator(0, this);
+            return iterator(internal_first_used(), this);
         }
         const_iterator begin() const noexcept {
-            return const_iterator(0, this);
+            return const_iterator(internal_first_used(), this);
         }
         const_iterator cbegin() const noexcept { return begin(); }
-        iterator end() noexcept { return iterator(nullptr, capacity(), this); }
-        const_iterator end() const noexcept { return const_iterator(nullptr, capacity(), this); }
+        iterator end() noexcept { return iterator(capacity(), this); }
+        const_iterator end() const noexcept { return const_iterator(capacity(), this); }
         const_iterator cend() const noexcept { return end(); }
 
     private:
@@ -250,8 +250,8 @@ namespace microc {
 
             }
             // items were moved, we only need to de-allocate old things
-            _alloc_kv.deallocate(_kvs);
-            _alloc_status.deallocate(_stats);
+            if(_kvs) _alloc_kv.deallocate(_kvs);
+            if(_stats) _alloc_status.deallocate(_stats);
             // assign new bucket info
             _kvs = new_key_vals;
             _stats = new_stats;
@@ -262,7 +262,8 @@ namespace microc {
                  const Hash& hash = Hash(),
                  const Allocator& allocator = Allocator()) :
                 _max_load_factor(.5f), _cap(0), _size(0),
-                _hasher(hash), _alloc_kv(allocator), _alloc_status(allocator) {
+                _hasher(hash), _alloc_kv(allocator), _alloc_status(allocator),
+                _kvs(nullptr), _stats(nullptr) {
             rehash(initial_capacity);
         }
         array_map_robin() : array_map_robin(DEFAULT_BUCKET_COUNT, Hash(), Allocator()) {}
@@ -286,7 +287,7 @@ namespace microc {
             rehash(other.capacity());
             for (size_type ix = 0; ix < capacity(); ++ix) {
                 ::new (_kvs+ix, microc_new::blah) value_type(other._kvs[ix]);
-                _stats[ix] = other._kvs[ix];
+                _stats[ix] = other._stats[ix];
             }
             _size = other._size;
         }
@@ -310,7 +311,7 @@ namespace microc {
                 for (size_type ix = 0; ix < capacity(); ++ix) {
                     ::new (_kvs+ix, microc_new::blah)
                                 value_type(microc::traits::move(other._kvs[ix]));
-                    _stats[ix] = other._kvs[ix];
+                    _stats[ix] = other._stats[ix];
                 }
                 _size = other._size;
                 other.clear();
@@ -327,7 +328,7 @@ namespace microc {
             rehash(other.capacity());
             for (size_type ix = 0; ix < capacity(); ++ix) {
                 ::new (_kvs+ix, microc_new::blah) value_type(other._kvs[ix]);
-                _stats[ix] = other._kvs[ix];
+                _stats[ix] = other._stats[ix];
             }
             _size = other._size;
             return *this;
@@ -350,7 +351,7 @@ namespace microc {
                 for (size_type ix = 0; ix < capacity(); ++ix) {
                     ::new (_kvs+ix, microc_new::blah)
                             value_type(microc::traits::move(other._kvs[ix]));
-                    _stats[ix] = other._kvs[ix];
+                    _stats[ix] = other._stats[ix];
                 }
                 _size = other._size;
                 other.clear();
@@ -409,7 +410,7 @@ namespace microc {
             _alloc_kv.deallocate(_kvs);
             _alloc_status.deallocate(_stats);
             // reset values
-            _kvs=nullptr; _size=0;
+            _kvs=nullptr; _stats= nullptr; _size=0; _cap=0;
         }
 
     private:
@@ -427,22 +428,21 @@ namespace microc {
                 const auto pos = mod(start + step); // modulo
                 if (is_free(pos)) { // free item, let's conquer
                     // put the item
-                    ::new(_kvs + pos, microc_new::blah)
-                                    value_type(microc::traits::forward<value_type>(kv));
+                    ::new(_kvs + pos, microc_new::blah) value_type(microc::traits::forward<VV>(kv));
                     _stats[pos] = 1;
                     ++_size;
                     return pos;
                 }
                 auto & item = kv_of(pos);
-                if (item.first == key) { // found, let's update value
-                    item = microc::traits::forward<value_type>(kv);
+                if (item.first == key) { // found, let's return value
+                    // item = microc::traits::forward<VV>(kv);
                     return pos;
                 }
                 base_dist = distance_to_home_of(item.first, pos);
                 if (base_dist < step) { // let's robin hood
                     // swap
                     value_type next_displaced_item = microc::traits::move(item);
-                    item = microc::traits::forward<value_type>(kv);
+                    item = microc::traits::forward<VV>(kv);
                     start = pos;
                     ++_size;
 
@@ -452,7 +452,7 @@ namespace microc {
                         has_pending_displace=false;
                         for (int step2 = 1; step2 < capacity(); ++step2) {
                             const auto pos2 = mod(start + step2); // modulo
-                            auto & item2 = _kvs[pos2];
+                            value_type & item2 = _kvs[pos2];
                             if (is_free(pos2)) { // free item, let's conquer
                                 // now item was copied, he has linked-list info but his
                                 // pred/succ do not point to him, so let's fix it
@@ -460,7 +460,7 @@ namespace microc {
                                 _stats[pos2] = 1;
                                 return pos;
                             }
-                            int item_dist = distance_to_home_of(item2.key, pos2);
+                            int item_dist = distance_to_home_of(item2.first, pos2);
                             if (item_dist < base_dist+step2) { // let's robin hood
                                 // before all, current displaced item might have wanted to move
                                 // to one of its siblings(prev/next), so make a copy and update them.
@@ -482,7 +482,7 @@ namespace microc {
             }
             // now displacements, this is not in the above loop because lru cache
             // requires some mods. NONE of the displaced items can be heads.
-
+            return capacity(); // this shouldnt happen
         }
 
     public:
@@ -518,22 +518,23 @@ namespace microc {
         }
 
     private:
-        void internal_erase(const Key & key) {
+        size_type internal_erase(const Key & key) {
+            // returns pos of deleted index, or capacity()
+            const auto cap = capacity();
             auto start = internal_pos_of(key);
-            if(start==capacity()) return;
+            if(start==cap) return cap;
             //
             (_kvs+start)->~value_type(); // destruct
             _stats[start] = 0; // free
             --_size;
-            ++start;
             // begin back shifting procedure
-            for (size_type step = 0; step < capacity(); ++step) {
+            for (size_type step = 1; step < cap; ++step) {
                 auto pos = mod(start + step); // modulo
                 // we are done when the item in question is free or it's distance
                 // from home is 0
-                if(is_free(pos)) return;
-                auto & item = _kvs[pos];
-                if(distance_to_home_of(item.key, pos) == 0) return;
+                if(is_free(pos)) return start;
+                value_type & item = _kvs[pos];
+                if(distance_to_home_of(item.first, pos) == 0) return start;
                 // other-wise, we need to move it left because it's left sibling is empty
                 const auto pos_predecessor = mod(start + step - 1); // modulo
                 // move-construct the item to predecessor place, which is free and destructed
@@ -543,24 +544,66 @@ namespace microc {
                 _stats[pos_predecessor] = 1;
                 _stats[pos] = 0;
             }
+            return start;
         }
 
+        iterator internal_erase_return_iterator(const Key & key) {
+            size_type pos = internal_erase(key);
+            return iterator(pos, this);
+        }
     public:
 
         size_type erase(const Key& key) {
-            auto iter_next = internal_erase(key);
-            return iter_next==end() ? 0 : 1;
+            auto pos = internal_erase(key);
+            return pos==capacity() ? 0 : 1;
         }
-        iterator erase(iterator pos) { return iterator(internal_erase(pos->first)); }
-        iterator erase(const_iterator pos) { return iterator(internal_erase(pos->first)); }
+        iterator erase(iterator pos) { return internal_erase_return_iterator(pos->first); }
+        iterator erase(const_iterator pos) { return internal_erase_return_iterator(pos->first); }
         iterator erase(const_iterator first, const_iterator last) {
             const_iterator current(first);
-            while (current!=last) current=erase(current);
+            while (current!=last and current!=end()) current=erase(current);
             return current;
         }
         template< class... Args >
         pair<iterator, bool> emplace(Args&&... args) {
             return insert(value_type(microc::traits::forward<Args>(args)...));
+        }
+
+#define MICROC_PRINT_SEQ 0
+#define MICROC_PRINT_USED 1
+#define MICROC_ALLOW_PRINT
+        void print(char order=0, int how_many=-1) const {
+#ifdef MICROC_ALLOW_PRINT
+            const char * str_order = order==0 ? "SEQUENCE" : "USED";
+
+            std::cout << "\n- Printing in " << str_order << " order \n";
+            std::cout << "- SIZE is " << _size << ", CAPACITY is " << _cap
+                      << ", LOAD FACTOR is " << load_factor()
+                      << ", MAX LOAD FACTOR is " << max_load_factor() << "\n";
+            std::cout << "- Printing " << (how_many==-1 ? "All" : std::to_string(how_many)) << " Items \n";
+
+            if(order==MICROC_PRINT_USED) {
+                if(empty()) {
+                    std::cout << "- EMPTY !!! \n\n";
+                    return;
+                }
+                for (const value_type & item : *this) {
+                    std::cout << "{ k: " << std::to_string(item.first) << ", v: "
+                            << std::to_string(item.second) << " },\n";
+                }
+            }
+            else {
+                for (size_type ix = 0; ix < capacity(); ++ix) {
+                    if(is_free(ix)) {
+                        std::cout << ix << " = FREE, \n";
+                    } else {
+                        std::cout << ix << " = { k: " << std::to_string(_kvs[ix].first)
+                        << ", v: " << std::to_string(_kvs[ix].second) << " },\n";
+                    }
+                }
+            }
+            std::cout << '\n';
+#endif
         }
     };
 
