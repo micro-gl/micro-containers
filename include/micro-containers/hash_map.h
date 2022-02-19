@@ -365,12 +365,12 @@ namespace microc {
                 rehash(other._bucket_count); // reserves a table
                 for(auto & item : other)
                     insert(microc::traits::move(item));
-                other.clear();
+                other.shutdown();
             }
         }
         hash_map(hash_map && other) noexcept :
                 hash_map(microc::traits::move(other), other.get_allocator()) {}
-        ~hash_map() { clear(); }
+        ~hash_map() { shutdown(); }
 
         hash_map & operator=(const hash_map & other) {
             if(this==&other) return *this;
@@ -382,10 +382,10 @@ namespace microc {
         }
         hash_map & operator=(hash_map && other) noexcept {
             if(this==&(other)) return *this;
-            clear();
             const bool are_equal_allocators = _alloc_node == other.get_allocator();
             _max_load_factor = other._max_load_factor;
             if(are_equal_allocators) {
+                shutdown();
                 _bucket_count=other._bucket_count;
                 _buckets = other._buckets;
                 _size = other._size;
@@ -393,10 +393,11 @@ namespace microc {
                 other._bucket_count=0;
                 other._size=0;
             } else {
+                clear();
                 rehash(other._bucket_count); // reserves a table
                 for(auto & item : other)
                     insert(microc::traits::move(item));
-                other.clear();
+                other.shutdown();
             }
             return *this;
         }
@@ -452,6 +453,15 @@ namespace microc {
             return iter->second;
         }
 
+        void shutdown() {
+            // destroy nodes and buckets
+            clear();
+            // destroy buckets and deallocate, this is useless, trivial destructor
+            for (size_type ix = 0; ix < _bucket_count; ++ix) _buckets[ix].~bucket_t();
+            if(_buckets) _alloc_bucket.deallocate(_buckets);
+            // reset values
+            _buckets=nullptr; _bucket_count=0;
+        }
         // Modifiers
         void clear() noexcept {
             const auto bucket_count = _bucket_count;
@@ -469,11 +479,7 @@ namespace microc {
                     _alloc_node.deallocate(removed_node);
                 }
             }
-            // destroy buckets and deallocate, this is useless, trivial destructor
-            for (size_type ix = 0; ix < bucket_count; ++ix) _buckets[ix].~bucket_t();
-            _alloc_bucket.deallocate(_buckets);
-            // reset values
-            _buckets=nullptr; _bucket_count=_size=0;
+            _size=0;
         }
 
         pair<iterator, bool> insert(const value_type& value) {

@@ -1,17 +1,18 @@
 #include "src/test_utils.h"
-#include <micro-containers/array_map_robin.h>
+#include <micro-containers/array_map_probing.h>
 
 using namespace microc;
 
 template<class Container>
-void print_array_map_robin(const Container & container) {
-    container.print(1);
+void print_array_map_probing(const Container & container) {
+    container.print(0);
+//    container.print(1);
 }
 
 void test_emplace() {
     print_test_header("test_emplace");
 
-    using map = array_map_robin<int, int>;
+    using map = array_map_probing<int, int>;
     map d;
 
     d.emplace(50, 50);
@@ -19,13 +20,13 @@ void test_emplace() {
     d.emplace(250, 250);
 
     std::cout << "- printing map" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 }
 
 void test_insert() {
     print_test_header("test_insert");
 
-    using map = array_map_robin<int, int>;
+    using map = array_map_probing<int, int>;
     map d;
 
     d.insert(pair<int, int>(50, 50));
@@ -35,13 +36,13 @@ void test_insert() {
     d.insert(pair<int, int>(450, 450));
 
     std::cout << "- printing map" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 }
 
 void test_insert_with_perfect_forward() {
     print_test_header("test_insert_with_perfect_forward");
 
-    using map = array_map_robin<int, int>;
+    using map = array_map_probing<int, int>;
     map d;
 
     d.insert(50, 50);
@@ -51,13 +52,13 @@ void test_insert_with_perfect_forward() {
     d.insert(450, 450);
 
     std::cout << "- printing dictionary" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 }
 
 void test_insert_with_range() {
     print_test_header("test_insert_with_range");
 
-    using map = array_map_robin<int, int>;
+    using map = array_map_probing<int, int>;
     map d_1, d_2;
 
     d_1.insert(50, 50);
@@ -73,20 +74,20 @@ void test_insert_with_range() {
     d_2.insert(351, 351);
 
     std::cout << "- printing map d1" << std::endl;
-    print_array_map_robin(d_1);
+    print_array_map_probing(d_1);
     std::cout << "- printing map d2" << std::endl;
-    print_array_map_robin(d_2);
+    print_array_map_probing(d_2);
 
     d_1.insert(d_2.begin(), d_2.end());
 
     std::cout << "- printing map d1 after range insert d2" << std::endl;
-    print_array_map_robin(d_1);
+    print_array_map_probing(d_1);
 }
 
 void test_clear() {
     print_test_header("test_clear");
 
-    using map = array_map_robin<int, int>;
+    using map = array_map_probing<int, int>;
     map d;
 
     d.insert(50, 50);
@@ -96,17 +97,17 @@ void test_clear() {
     d.insert(450, 450);
 
     std::cout << "- printing map" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 
     std::cout << "- printing map after clear" << std::endl;
     d.clear();
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 }
 
 void test_erase_with_key() {
     print_test_header("test_erase_with_key");
 
-    using dict = array_map_robin<int, int>;
+    using dict = array_map_probing<int, int>;
     dict d;
 
     d.insert(50, 50);
@@ -116,20 +117,20 @@ void test_erase_with_key() {
     d.insert(450, 450);
 
     std::cout << "- dictionary" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
     //
 
     d.erase(250);
     d.erase(450);
 
     std::cout << "- after erase of 250 and 450 keys" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 }
 
 void test_erase_with_range_iterator() {
     print_test_header("test_erase_with_range_iterator");
 
-    using dict = array_map_robin<int, int>;
+    using dict = array_map_probing<int, int>;
     dict d;
 
     d.insert(50, 50);
@@ -139,17 +140,17 @@ void test_erase_with_range_iterator() {
 //    d.insert(450, 450);
 
     std::cout << "- dictionary" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
     //
     d.erase(d.begin(), (d.begin()+2));
     std::cout << "- after erase" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 }
 
 void test_erase_with_iterator() {
     print_test_header("test_erase_with_iterator");
 
-    using dict = array_map_robin<int, int>;
+    using dict = array_map_probing<int, int>;
     dict d;
 
     auto pos1 = d.insert(50, 50).first;
@@ -159,7 +160,7 @@ void test_erase_with_iterator() {
     d.insert(450, 450);
 
     std::cout << "- dictionary" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
     //
 
     const auto iter_after_erase2 = d.erase(pos2);
@@ -167,13 +168,13 @@ void test_erase_with_iterator() {
     const auto iter_after_erase3 = d.erase(pos3);
     bool invalid = iter_after_erase3==d.end();
     std::cout << "- after erase" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 }
 
 void test_find() {
     print_test_header("test_find");
 
-    using dict = array_map_robin<int, int>;
+    using dict = array_map_probing<int, int>;
     dict d;
 
     d.insert(50, 50);
@@ -183,7 +184,7 @@ void test_find() {
     d.insert(450, 450);
     //
     std::cout << "- dictionary" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 
     auto iter = d.find(350);
     std::cout << "- found 350: " << to_string(*iter) << std::endl;
@@ -194,7 +195,7 @@ void test_find() {
 void test_contains() {
     print_test_header("test_contains");
 
-    using dict = array_map_robin<int, int>;
+    using dict = array_map_probing<int, int>;
     dict d;
 
     d.insert(50, 50);
@@ -204,7 +205,7 @@ void test_contains() {
     d.insert(450, 450);
     //
     std::cout << "- dictionary" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 
     for (const auto & item : d) {
         std::cout << "- does map contains " << to_string(item.first)
@@ -221,7 +222,7 @@ void test_contains() {
 void test_at() {
     print_test_header("test_at");
 
-    using dict = array_map_robin<int, int>;
+    using dict = array_map_probing<int, int>;
     dict d;
 
     d.insert(50, 50);
@@ -231,7 +232,7 @@ void test_at() {
     d.insert(450, 450);
     //
     std::cout << "- dictionary" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 
     const auto & d_const = d;
     auto & value_1 = d_const.at(150);
@@ -244,7 +245,7 @@ void test_at() {
 void test_access_operator() {
     print_test_header("test_access_operator");
 
-    using dict = array_map_robin<int, int>;
+    using dict = array_map_probing<int, int>;
     dict d;
 
     d.insert(50, 50);
@@ -254,14 +255,14 @@ void test_access_operator() {
     d.insert(450, 450);
     //
     std::cout << "- dictionary" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 
     d[150] = 151;
 
     std::cout << "- d[150] = 151 is updated and reports " << d[150] << std::endl;
 
     std::cout << "- dictionary" << std::endl;
-    print_array_map_robin(d);
+    print_array_map_probing(d);
 
 }
 
@@ -270,7 +271,7 @@ void test_access_operator() {
 void test_copy_and_move_ctor() {
     print_test_header("test_copy_and_move_ctor");
 
-    using dict = array_map_robin<int, int>;
+    using dict = array_map_probing<int, int>;
     dict d1;
 
     d1.insert(50, 50);
@@ -280,26 +281,26 @@ void test_copy_and_move_ctor() {
     d1.insert(450, 450);
 
     std::cout << "- printing dictionary d1" << std::endl;
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
 
     //
 
     dict d2 = d1;
 
     std::cout << "- printing dictionary d2 after copy constructing with d1" << std::endl;
-    print_array_map_robin(d2);
+    print_array_map_probing(d2);
 
     dict d3 = std::move(d1);
     std::cout << "- printing dictionary d3 after move constructing with d1" << std::endl;
-    print_array_map_robin(d3);
+    print_array_map_probing(d3);
     std::cout << "- printing dictionary d1" << std::endl;
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
 }
 
 void test_copy_and_move_assign() {
     print_test_header("test_copy_and_move_assign");
 
-    using map = array_map_robin<int, int>;
+    using map = array_map_probing<int, int>;
     map d1, d2, d3;
 
     d1.insert(50, 50);
@@ -309,60 +310,62 @@ void test_copy_and_move_assign() {
     d1.insert(450, 450);
 
     std::cout << "- printing dictionary d1" << std::endl;
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
 
     d2 = d1;
 
     std::cout << "- printing dictionary d2 after copy assign with d1" << std::endl;
-    print_array_map_robin(d2);
+    print_array_map_probing(d2);
 
     d3 = std::move(d1);
     std::cout << "- printing dictionary d3 after move assign with d1" << std::endl;
-    print_array_map_robin(d3);
+    print_array_map_probing(d3);
     std::cout << "- printing dictionary d1" << std::endl;
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
 }
 
 void test_rehash() {
     print_test_header("test_rehash");
 
-    using map = array_map_robin<int, int>;
-    map d1(13);
+    using map = array_map_probing<int, int>;
+    map d1(1);
     d1.insert(1, 50);
     d1.insert(2, 150);
     d1.insert(3, 250);
     d1.insert(4, 350);
     d1.insert(5, 450);
-    d1.insert(6, 450);
+    d1.insert(16, 450);
 
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
 
 //    d1.max_load_factor(0.1f);
     d1.rehash(32);
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
 }
 
 void test_rehash_2() {
     print_test_header("test_rehash_2");
 
-    using map = array_map_robin<int, int>;
+    using map = array_map_probing<int, int>;
     map d1(1);
     d1.insert(1, 50);
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
     d1.insert(2, 150);
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
     d1.insert(3, 250);
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
     d1.insert(4, 350);
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
+    d1.clear();
+    print_array_map_probing(d1);
     d1.insert(5, 450);
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
     d1.insert(6, 450);
-    print_array_map_robin(d1);
+    print_array_map_probing(d1);
 
 //    d1.max_load_factor(3.0f);
 //    d1.rehash(2);
-//    print_array_map_robin_info(d1);
+//    print_array_map_probing_info(d1);
 }
 
 int main() {
@@ -392,6 +395,6 @@ int main() {
     test_copy_and_move_assign();
 //
     test_rehash();
-//    test_rehash_2();
+    test_rehash_2();
 }
 

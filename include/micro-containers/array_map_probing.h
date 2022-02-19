@@ -22,7 +22,6 @@ namespace microc {
      * Hash-map is an un-ordered associative data structure also known as Hash-Table
      * Notes:
      * - This class is Allocator-Aware
-     * - Uses a round-robin linear probing
      * @tparam Key the item type, that the tree stores
      * @tparam T The mapped value type of a item
      * @tparam Hash The hash struct/function must implement `size_type operator()(const Key & item) const `
@@ -31,7 +30,7 @@ namespace microc {
     template<class Key, class T,
              class Hash=microc::hash<Key>,
              class Allocator=microc::std_allocator<char>>
-    class array_map_robin {
+    class array_map_probing {
     public:
         using key_type = Key;
         using mapped_type = T;
@@ -45,18 +44,18 @@ namespace microc {
         using const_pointer = const value_type *;
 
     private:
-        static array_map_robin * ncn(const array_map_robin * node)
-        { return const_cast<array_map_robin *>(node); }
+        static array_map_probing * ncn(const array_map_probing * node)
+        { return const_cast<array_map_probing *>(node); }
 
         template<class value_reference_type>
         struct iterator_t {
             using pointer = typename microc::traits::remove_reference_t<value_reference_type> *;
-            const array_map_robin * _c; // container
-            size_type _i; // index
+            const array_map_probing * _c; // container
+            size_type _i; // bucket index
 
             template<class value_reference_type_t>
             iterator_t(const iterator_t<value_reference_type_t> & o) : iterator_t(o._i, o._c) {}
-            explicit iterator_t(size_type i, const array_map_robin * c) : _i(i), _c(c) {}
+            explicit iterator_t(size_type i, const array_map_probing * c) : _i(i), _c(c) {}
             iterator_t& operator++() {
                 _i=_c->internal_next_used(_i+1); return *this;
             }
@@ -86,39 +85,39 @@ namespace microc {
 
     private:
         static constexpr size_type FREE = 0;
-        static constexpr size_type USED = 1;
-
+        static constexpr size_type TOMBSTONE = 1;
+        static constexpr size_type USED = 2;
         inline bool is_free(size_type idx) const { return _stats[idx]==FREE; }
+        inline bool is_tombstone(size_type idx) const { return _stats[idx]==TOMBSTONE; }
+        inline bool is_used(size_type idx) const { return _stats[idx]==USED; }
         inline Key & key_of(size_type idx) const { return _kvs[idx].first; }
         inline value_type & kv_of(size_type idx) const { return _kvs[idx]; }
         inline value_type & kv_of(size_type idx) { return _kvs[idx]; }
         inline T & value_of(size_type idx) const { return _kvs[idx].second; }
         inline T & value_of(size_type idx) { return _kvs[idx].second; }
-        size_type internal_first_used() const {
-            return internal_next_used(0);
-        }
+        size_type internal_first_used() const { return internal_next_used(0); }
         size_type internal_next_used(size_type start) const {
             for (size_type ix = start; ix < capacity(); ++ix)
-                if(_stats[ix]==USED) return ix;
+                if(is_used(ix)) return ix;
             return capacity();
         }
         size_type internal_prev_used(size_type start) const {
             for (size_type ix = start+1; ix; --ix)
-                if(_stats[ix-1]==USED) return (ix-1);
+                if(is_used(ix-1)) return (ix-1);
             return capacity();
         }
-        inline size_type k2p(const Key & key) const {
+        inline int k2p(const Key & key) const {
             // when size is power of 2, we can get modulo with
             // bit-wise operation
             return mod(_hasher(key));
         }
-        inline size_type mod(size_type idx) const {
+        inline int mod(size_type idx) const {
             // when size is power of 2, we can get modulo with
             // bit-wise operation
             return ( idx & (_cap-1));
         }
 
-        inline size_type distance_to_home_of(const Key & key, size_type current_home) const {
+        inline int distance_to_home_of(const Key & key, int current_home) const {
             // this is to avoid branching due to current home wraping around
             return k2p((current_home - k2p(key)) + _cap);
         }
@@ -128,13 +127,12 @@ namespace microc {
             const auto cap = capacity();
             for (size_type step = 0; step < cap; ++step) {
                 auto pos = mod(step + start); // modulo
-                const auto _is_free = is_free(pos);
-                if (_is_free) return cap; // important that this is first
-                if (key_of(pos) == key) return pos; // found the item with high probability
-                if (distance_to_home_of(key, pos) < step) {
-                    // early stop detection, we found a non-free, that was closer to home,
-                    return cap;
-                }
+                const auto stat = _stats[pos];
+                const auto _is_tombstone = stat==TOMBSTONE;
+                if (_is_tombstone) continue; // important that this is first
+                const auto _is_free = stat==FREE;
+                if (_is_free) return cap;
+                if (key_of(pos) == key) return pos; // found the item
             }
             return cap;
         }
@@ -187,24 +185,26 @@ namespace microc {
             if(load_factor()<max_load_factor()) return;
             // else, let's rehash
             size_type new_cap = minimal_required_cap_for_valid_load_factor();
-            rehash(new_cap);
+            internal_rehash(new_cap);
         }
 
         bool requires_rehash() const { return load_factor()>max_load_factor(); }
 
     private:
         void internal_rehash(size_type new_cap) {
-            // new_cap is power of 2
+            // new_cap is a power of 2
             const size_type old_cap = _cap;
             if(new_cap == old_cap || new_cap == 0) return;
             // allocate and construct new buckets
             auto * new_key_vals = _alloc_kv.allocate(new_cap);
             auto * new_stats = _alloc_status.allocate(new_cap);
             for (size_type ix = 0; ix < new_cap; ++ix)
-                new_stats[ix] = 0; // set it free
-                // iterate all nodes
+                new_stats[ix] = FREE; // set it free
+            // iterate all nodes
             for (size_type ix = 0; ix < old_cap; ++ix) {
-                if(is_free(ix)) continue;
+                const auto stat = _stats[ix];
+                if(stat!=USED) continue; // free or tombstone become free
+
                 value_type & item = _kvs[ix];
                 // compute hash again and re-assign bucket to new bucket
                 const auto hash = _hasher(item.first);
@@ -212,8 +212,7 @@ namespace microc {
                 // move construct old item
                 ::new(new_key_vals + new_idx, microc_new::blah)
                                 value_type (microc::traits::move(item));
-                new_stats[new_idx] = 1; // occupied
-
+                new_stats[new_idx] = USED; // occupied
             }
             // items were moved, we only need to de-allocate old things
             if(_kvs) _alloc_kv.deallocate(_kvs);
@@ -229,7 +228,7 @@ namespace microc {
             internal_rehash(pow2_upper(suggested_cap));
         }
 
-        array_map_robin(size_type initial_capacity,
+        array_map_probing(size_type initial_capacity,
                  const Hash& hash = Hash(),
                  const Allocator& allocator = Allocator()) :
                 _max_load_factor(.5f), _cap(0), _size(0),
@@ -237,24 +236,24 @@ namespace microc {
                 _kvs(nullptr), _stats(nullptr) {
             rehash(initial_capacity);
         }
-        array_map_robin() : array_map_robin(DEFAULT_BUCKET_COUNT, Hash(), Allocator()) {}
-        explicit array_map_robin(const Allocator& alloc) : array_map_robin(DEFAULT_BUCKET_COUNT, Hash(), alloc) {};
-        array_map_robin(size_type initial_capacity, const Allocator& alloc) : array_map_robin(initial_capacity, Hash(), alloc) {}
+        array_map_probing() : array_map_probing(DEFAULT_BUCKET_COUNT, Hash(), Allocator()) {}
+        explicit array_map_probing(const Allocator& alloc) : array_map_probing(DEFAULT_BUCKET_COUNT, Hash(), alloc) {};
+        array_map_probing(size_type initial_capacity, const Allocator& alloc) : array_map_probing(initial_capacity, Hash(), alloc) {}
 
         template<class InputIt>
-        array_map_robin(InputIt first, InputIt last, size_type initial_capacity,
+        array_map_probing(InputIt first, InputIt last, size_type initial_capacity,
                  const Hash& hash = Hash(), const Allocator& alloc = Allocator() )
-                 : array_map_robin(initial_capacity, hash, alloc) {
+                 : array_map_probing(initial_capacity, hash, alloc) {
             InputIt current(first);
             while(current!=last) { insert(*current); ++current; }
         }
         template< class InputIt >
-        array_map_robin(InputIt first, InputIt last, size_type initial_capacity,
+        array_map_probing(InputIt first, InputIt last, size_type initial_capacity,
                  const Allocator& alloc = Allocator() )
-                 : array_map_robin(first, last, initial_capacity, Hash(), alloc) {}
+                 : array_map_probing(first, last, initial_capacity, Hash(), alloc) {}
 
-        array_map_robin(const array_map_robin & other, const Allocator & allocator) :
-                    array_map_robin(0, other._hasher, other.get_allocator()) {
+        array_map_probing(const array_map_probing & other, const Allocator & allocator) :
+                    array_map_probing(0, other._hasher, other.get_allocator()) {
             internal_rehash(other.capacity());
             for (size_type ix = 0; ix < capacity(); ++ix) {
                 ::new (_kvs+ix, microc_new::blah) value_type(other._kvs[ix]);
@@ -262,10 +261,10 @@ namespace microc {
             }
             _size = other._size;
         }
-        array_map_robin(const array_map_robin & other) : array_map_robin(other, other.get_allocator()) {}
+        array_map_probing(const array_map_probing & other) : array_map_probing(other, other.get_allocator()) {}
 
-        array_map_robin(array_map_robin && other, const Allocator & allocator) :
-                    array_map_robin(size_type(0), other._hasher, other.get_allocator()) {
+        array_map_probing(array_map_probing && other, const Allocator & allocator) :
+                    array_map_probing(size_type(0), other._hasher, other.get_allocator()) {
             // using 0 to mute main constructor table creation
             const bool are_equal_allocators = _alloc_kv == allocator;
             _max_load_factor = other._max_load_factor;
@@ -278,7 +277,6 @@ namespace microc {
                 other._cap=0;
                 other._kvs= nullptr;
                 other._stats= nullptr;
-                other.shutdown();
             } else {
                 internal_rehash(other._cap); // reserves a table
                 for (size_type ix = 0; ix < capacity(); ++ix) {
@@ -290,14 +288,14 @@ namespace microc {
                 other.shutdown();
             }
         }
-        array_map_robin(array_map_robin && other) noexcept :
-                array_map_robin(microc::traits::move(other), other.get_allocator()) {}
-        ~array_map_robin() { shutdown(); }
+        array_map_probing(array_map_probing && other) noexcept :
+                array_map_probing(microc::traits::move(other), other.get_allocator()) {}
+        ~array_map_probing() { shutdown(); }
 
-        array_map_robin & operator=(const array_map_robin & other) {
+        array_map_probing & operator=(const array_map_probing & other) {
             if(this==&other) return *this;
-            _max_load_factor = other.max_load_factor();
             clear();
+            _max_load_factor = other.max_load_factor();
             internal_rehash(other.capacity());
             for (size_type ix = 0; ix < capacity(); ++ix) {
                 ::new (_kvs+ix, microc_new::blah) value_type(other._kvs[ix]);
@@ -306,7 +304,7 @@ namespace microc {
             _size = other._size;
             return *this;
         }
-        array_map_robin & operator=(array_map_robin && other) noexcept {
+        array_map_probing & operator=(array_map_probing && other) noexcept {
             if(this==&(other)) return *this;
             const bool are_equal_allocators = _alloc_kv == other.get_allocator();
             _max_load_factor = other._max_load_factor;
@@ -322,7 +320,7 @@ namespace microc {
                 other._stats= nullptr;
             } else {
                 clear();
-                rehash(other.capacity()); // reserves a table
+                internal_rehash(other.capacity()); // reserves a table
                 for (size_type ix = 0; ix < capacity(); ++ix) {
                     ::new (_kvs+ix, microc_new::blah)
                             value_type(microc::traits::move(other._kvs[ix]));
@@ -396,75 +394,41 @@ namespace microc {
         }
 
     private:
-        template<class VV>
-        size_type internal_insert(VV && kv) {
-            if(requires_rehash()) {
-                rehash(_cap<<1);
-            }
+        template<class KV>
+        size_type internal_insert(KV && kv) {
+            if(requires_rehash()) internal_rehash(_cap<<1);
+            // with probing we have to first search for the item
+            // and then to insert if not found in the first free/tombstone we encountered.
             auto & key = kv.first;
             auto & value = kv.second;
             auto start = k2p(key);
-            size_type base_dist=0;
-            // first iterations to find a spot
-            for (size_type step = 0; step < capacity(); ++step) {
-                const auto pos = mod(start + step); // modulo
-                if (is_free(pos)) { // free item, let's conquer
-                    // put the item
-                    ::new(_kvs + pos, microc_new::blah) value_type(microc::traits::forward<VV>(kv));
-                    _stats[pos] = USED;
-                    ++_size;
-                    return pos;
+            const auto cap = capacity();
+            // first iterations to find if item exists and record where we first saw
+            // a free/tombstone place.
+            size_type first_free_pos=cap;
+            for (size_type step = 0; step < cap; ++step) {
+                auto pos = mod(step+start); // modulo
+                const auto stat = _stats[pos];
+                if (stat==TOMBSTONE) { // tombstone
+                    // skip over tombstone but remember
+                    if(first_free_pos==cap) first_free_pos = pos;
+                    continue; // important that this is first
                 }
-                auto & item = kv_of(pos);
-                if (item.first == key) { // found, let's return value
-                    // item = microc::traits::forward<VV>(kv);
-                    return pos;
-                }
-                base_dist = distance_to_home_of(item.first, pos);
-                if (base_dist < step) { // let's robin hood
-                    // swap
-                    value_type next_displaced_item = microc::traits::move(item);
-                    item = microc::traits::forward<VV>(kv);
-                    start = pos;
-                    ++_size;
-
-                    // start displace procedure
-                    bool has_pending_displace=true;
-                    while(has_pending_displace) {
-                        has_pending_displace=false;
-                        for (size_type step2 = 1; step2 < capacity(); ++step2) {
-                            const auto pos2 = mod(start + step2); // modulo
-                            value_type & item2 = _kvs[pos2];
-                            if (is_free(pos2)) { // free item, let's conquer
-                                // now item was copied, he has linked-list info but his
-                                // pred/succ do not point to him, so let's fix it
-                                item2 = microc::traits::move(next_displaced_item);
-                                _stats[pos2] = USED;
-                                return pos;
-                            }
-                            size_type item_dist = distance_to_home_of(item2.first, pos2);
-                            if (item_dist < base_dist+step2) { // let's robin hood
-                                // before all, current displaced item might have wanted to move
-                                // to one of its siblings(prev/next), so make a copy and update them.
-                                auto temp = microc::traits::move(next_displaced_item);
-                                ::new(&next_displaced_item) value_type(microc::traits::move(item2));
-                                item2 = microc::traits::move(temp);
-                                // prepare for next iteration
-                                base_dist = item_dist;
-                                start = pos2;
-                                has_pending_displace=true;
-                                break;
-                            }
-                        }
-                    }
-                    //
-
+                if (stat==FREE) { // free place, bail out, item not found
+                    if(first_free_pos==cap) first_free_pos = pos;
                     break;
+                } // important that this is first
+                if (key_of(pos) == key) { // found the item, do nothing and return
+                    return pos;
                 }
             }
-            // now displacements, this is not in the above loop because lru cache
-            // requires some mods. NONE of the displaced items can be heads.
-            return capacity(); // this shouldnt happen
+            // error, key not found and no free place to allocate
+            if(first_free_pos==cap) return cap;
+            // else, let's forward-construct. Free and Tombstones are always destructed or previously moved-abandoned.
+            ::new(_kvs + first_free_pos, microc_new::blah) value_type(microc::traits::forward<KV>(kv));
+            _stats[first_free_pos] = USED; // mark occupied
+            ++_size;
+            return first_free_pos;
         }
 
     public:
@@ -501,32 +465,12 @@ namespace microc {
 
     private:
         size_type internal_erase(const Key & key) {
-            // returns pos of deleted index, or capacity()
             const auto cap = capacity();
-            auto start = internal_pos_of(key);
-            if(start==cap) return cap;
-            //
-            (_kvs+start)->~value_type(); // destruct
-            _stats[start] = FREE; // free
-            --_size;
-            // begin back shifting procedure
-            for (size_type step = 1; step < cap; ++step) {
-                auto pos = mod(start + step); // modulo
-                // we are done when the item in question is free or it's distance
-                // from home is 0
-                if(is_free(pos)) return start;
-                value_type & item = _kvs[pos];
-                if(distance_to_home_of(item.first, pos) == 0) return start;
-                // other-wise, we need to move it left because it's left sibling is empty
-                const auto pos_predecessor = mod(start + step - 1); // modulo
-                // move-construct the item to predecessor place, which is free and destructed
-                ::new (_kvs+pos_predecessor) value_type(microc::traits::move(item));
-                // we don't need to destruct the moved item because it was moved, but
-                // we need to update the stats
-                _stats[pos_predecessor] = USED;
-                _stats[pos] = FREE;
-            }
-            return start;
+            auto pos = internal_pos_of(key);
+            if(pos==cap) return cap;
+            _kvs[pos].~value_type();
+            _stats[pos] = TOMBSTONE;
+            return pos;
         }
 
         iterator internal_erase_return_iterator(const Key & key) {
@@ -554,7 +498,7 @@ namespace microc {
 #define MICROC_PRINT_SEQ 0
 #define MICROC_PRINT_USED 1
 #define MICROC_ALLOW_PRINT
-    void print(char order=0, size_type how_many=-1) const {
+        void print(char order=0, int how_many=-1) const {
 #ifdef MICROC_ALLOW_PRINT
             const char * str_order = order==0 ? "SEQUENCE" : "USED";
 
@@ -578,6 +522,8 @@ namespace microc {
                 for (size_type ix = 0; ix < capacity(); ++ix) {
                     if(is_free(ix)) {
                         std::cout << ix << " = FREE, \n";
+                    } else if(is_tombstone(ix)) {
+                        std::cout << ix << " = TOMBSTONE, \n";
                     } else {
                         std::cout << ix << " = { k: " << std::to_string(_kvs[ix].first)
                         << ", v: " << std::to_string(_kvs[ix].second) << " },\n";
@@ -590,10 +536,10 @@ namespace microc {
     };
 
     template<class Key, class T, class Hash, class Allocator>
-    bool operator==(const array_map_robin<Key, T, Hash, Allocator>& lhs,
-                    const array_map_robin<Key, T, Hash, Allocator>& rhs ) {
+    bool operator==(const array_map_probing<Key, T, Hash, Allocator>& lhs,
+                    const array_map_probing<Key, T, Hash, Allocator>& rhs ) {
         if(!(lhs.size()==rhs.size())) return false;
-        using size_type = typename array_map_robin<Key, T, Hash, Allocator>::size_type;
+        using size_type = typename array_map_probing<Key, T, Hash, Allocator>::size_type;
         for (size_type ix = 0; ix < lhs.size(); ++ix)
             if(!(lhs[ix]==rhs[ix])) return false;
         return true;
