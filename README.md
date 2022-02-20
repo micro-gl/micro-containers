@@ -24,6 +24,8 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 - hash_set
 - array_map_robin -> Robin Hood Linear Probing
 - array_map_probing -> Classic Linear Probing
+- array_set_robin -> Robin Hood Linear Probing
+- array_set_probing -> Classic Linear Probing
 
 #### Multi Sequence Containers
 - chunker

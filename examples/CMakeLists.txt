@@ -24,6 +24,7 @@ set(SOURCES
         test_array_map_robin.cpp
         test_array_map_probing.cpp
         test_array_set_robin.cpp
+        test_array_set_probing.cpp
         test_hash_set.cpp
         test_array.cpp
         test_static_array.cpp
