@@ -19,23 +19,21 @@ namespace microc {
     #endif
 
     /**
-     * Hash-map is an un-ordered associative data structure also known as Hash-Table
+     * Array set is an un-ordered associative data structure also known as Hash-Table
      * Notes:
      * - This class is Allocator-Aware
      * - Uses a round-robin linear probing
-     * @tparam Key the item type, that the tree stores
-     * @tparam T The mapped value type of a item
+     * @tparam Key the Key type, that the tree stores
      * @tparam Hash The hash struct/function must implement `size_type operator()(const Key & item) const `
      * @tparam Allocator allocator type
      */
-    template<class Key, class T,
+    template<class Key,
              class Hash=microc::hash<Key>,
              class Allocator=microc::std_allocator<char>>
-    class array_map_robin {
+    class array_set_robin {
     public:
         using key_type = Key;
-        using mapped_type = T;
-        using value_type = pair<Key, T>;
+        using value_type = Key;
         using size_type = microc::size_t;
         using hasher = Hash;
         using allocator_type = Allocator;
@@ -45,18 +43,18 @@ namespace microc {
         using const_pointer = const value_type *;
 
     private:
-        static array_map_robin * ncn(const array_map_robin * node)
-        { return const_cast<array_map_robin *>(node); }
+        static array_set_robin * ncn(const array_set_robin * node)
+        { return const_cast<array_set_robin *>(node); }
 
         template<class value_reference_type>
         struct iterator_t {
             using pointer = typename microc::traits::remove_reference_t<value_reference_type> *;
-            const array_map_robin * _c; // container
+            const array_set_robin * _c; // container
             size_type _i; // index
 
             template<class value_reference_type_t>
             iterator_t(const iterator_t<value_reference_type_t> & o) : iterator_t(o._i, o._c) {}
-            explicit iterator_t(size_type i, const array_map_robin * c) : _i(i), _c(c) {}
+            explicit iterator_t(size_type i, const array_set_robin * c) : _i(i), _c(c) {}
             iterator_t& operator++() {
                 _i=_c->internal_next_used(_i+1); return *this;
             }
@@ -73,8 +71,8 @@ namespace microc {
             iterator_t operator--(int) { iterator_t ret(_i, _c); --(*this); return ret; }
             bool operator==(iterator_t o) const { return _i==o._i; }
             bool operator!=(iterator_t o) const { return !(*this==o); }
-            value_reference_type operator*() const { return (*ncn(_c))._kvs[_i]; }
-            pointer operator->() const { return &(*ncn(_c))._kvs[_i]; }
+            value_reference_type operator*() const { return (*ncn(_c))._keys[_i]; }
+            pointer operator->() const { return &(*ncn(_c))._keys[_i]; }
         };
 
     public:
@@ -89,11 +87,7 @@ namespace microc {
         static constexpr size_type USED = 1;
 
         inline bool is_free(size_type idx) const { return _stats[idx]==FREE; }
-        inline Key & key_of(size_type idx) const { return _kvs[idx].first; }
-        inline value_type & kv_of(size_type idx) const { return _kvs[idx]; }
-        inline value_type & kv_of(size_type idx) { return _kvs[idx]; }
-        inline T & value_of(size_type idx) const { return _kvs[idx].second; }
-        inline T & value_of(size_type idx) { return _kvs[idx].second; }
+        inline Key & key_of(size_type idx) const { return _keys[idx]; }
         size_type internal_first_used() const {
             return internal_next_used(0);
         }
@@ -172,10 +166,10 @@ namespace microc {
         hasher _hasher;
         float _max_load_factor;
         // allocators
-        node_allocator _alloc_kv;
+        node_allocator _alloc_keys;
         stat_allocator _alloc_status;
         // data
-        value_type * _kvs;
+        value_type * _keys;
         char * _stats;
 
     public:
@@ -199,28 +193,28 @@ namespace microc {
             const size_type old_cap = _cap;
             if(new_cap == old_cap || new_cap == 0) return;
             // allocate and construct new buckets
-            auto * new_key_vals = _alloc_kv.allocate(new_cap);
+            auto * new_key_vals = _alloc_keys.allocate(new_cap);
             auto * new_stats = _alloc_status.allocate(new_cap);
             for (size_type ix = 0; ix < new_cap; ++ix)
                 new_stats[ix] = 0; // set it free
                 // iterate all nodes
             for (size_type ix = 0; ix < old_cap; ++ix) {
                 if(is_free(ix)) continue;
-                value_type & item = _kvs[ix];
+                value_type & item_key = key_of(ix);
                 // compute hash again and re-assign bucket to new bucket
-                const auto hash = _hasher(item.first);
+                const auto hash = _hasher(item_key);
                 size_type new_idx = hash & (new_cap-1);
-                // move construct old item
+                // move construct old item_key
                 ::new(new_key_vals + new_idx, microc_new::blah)
-                                value_type (microc::traits::move(item));
+                                value_type (microc::traits::move(item_key));
                 new_stats[new_idx] = 1; // occupied
 
             }
             // items were moved, we only need to de-allocate old things
-            if(_kvs) _alloc_kv.deallocate(_kvs);
+            if(_keys) _alloc_keys.deallocate(_keys);
             if(_stats) _alloc_status.deallocate(_stats);
             // assign new bucket info
-            _kvs = new_key_vals;
+            _keys = new_key_vals;
             _stats = new_stats;
             _cap = new_cap;
         }
@@ -230,103 +224,103 @@ namespace microc {
             internal_rehash(pow2_upper(suggested_cap));
         }
 
-        array_map_robin(size_type initial_capacity,
+        array_set_robin(size_type initial_capacity,
                  const Hash& hash = Hash(),
                  const Allocator& allocator = Allocator()) :
                 _max_load_factor(.5f), _cap(0), _size(0),
-                _hasher(hash), _alloc_kv(allocator), _alloc_status(allocator),
-                _kvs(nullptr), _stats(nullptr) {
+                _hasher(hash), _alloc_keys(allocator), _alloc_status(allocator),
+                _keys(nullptr), _stats(nullptr) {
             rehash(initial_capacity);
         }
-        array_map_robin() : array_map_robin(DEFAULT_BUCKET_COUNT, Hash(), Allocator()) {}
-        explicit array_map_robin(const Allocator& alloc) : array_map_robin(DEFAULT_BUCKET_COUNT, Hash(), alloc) {};
-        array_map_robin(size_type initial_capacity, const Allocator& alloc) : array_map_robin(initial_capacity, Hash(), alloc) {}
+        array_set_robin() : array_set_robin(DEFAULT_BUCKET_COUNT, Hash(), Allocator()) {}
+        explicit array_set_robin(const Allocator& alloc) : array_set_robin(DEFAULT_BUCKET_COUNT, Hash(), alloc) {};
+        array_set_robin(size_type initial_capacity, const Allocator& alloc) : array_set_robin(initial_capacity, Hash(), alloc) {}
 
         template<class InputIt>
-        array_map_robin(InputIt first, InputIt last, size_type initial_capacity,
+        array_set_robin(InputIt first, InputIt last, size_type initial_capacity,
                  const Hash& hash = Hash(), const Allocator& alloc = Allocator() )
-                 : array_map_robin(initial_capacity, hash, alloc) {
+                 : array_set_robin(initial_capacity, hash, alloc) {
             InputIt current(first);
             while(current!=last) { insert(*current); ++current; }
         }
         template< class InputIt >
-        array_map_robin(InputIt first, InputIt last, size_type initial_capacity,
+        array_set_robin(InputIt first, InputIt last, size_type initial_capacity,
                  const Allocator& alloc = Allocator() )
-                 : array_map_robin(first, last, initial_capacity, Hash(), alloc) {}
+                 : array_set_robin(first, last, initial_capacity, Hash(), alloc) {}
 
-        array_map_robin(const array_map_robin & other, const Allocator & allocator) :
-                    array_map_robin(0, other._hasher, other.get_allocator()) {
+        array_set_robin(const array_set_robin & other, const Allocator & allocator) :
+                    array_set_robin(0, other._hasher, other.get_allocator()) {
             internal_rehash(other.capacity());
             for (size_type ix = 0; ix < capacity(); ++ix) {
-                ::new (_kvs+ix, microc_new::blah) value_type(other._kvs[ix]);
+                ::new (_keys + ix, microc_new::blah) value_type(other._keys[ix]);
                 _stats[ix] = other._stats[ix];
             }
             _size = other._size;
         }
-        array_map_robin(const array_map_robin & other) : array_map_robin(other, other.get_allocator()) {}
+        array_set_robin(const array_set_robin & other) : array_set_robin(other, other.get_allocator()) {}
 
-        array_map_robin(array_map_robin && other, const Allocator & allocator) :
-                    array_map_robin(size_type(0), other._hasher, other.get_allocator()) {
+        array_set_robin(array_set_robin && other, const Allocator & allocator) :
+                    array_set_robin(size_type(0), other._hasher, other.get_allocator()) {
             // using 0 to mute main constructor table creation
-            const bool are_equal_allocators = _alloc_kv == allocator;
+            const bool are_equal_allocators = _alloc_keys == allocator;
             _max_load_factor = other._max_load_factor;
             if(are_equal_allocators) {
                 _cap=other._cap;
                 _size = other._size;
-                _kvs = other._kvs;
+                _keys = other._keys;
                 _stats = other._stats;
                 other._size=0;
                 other._cap=0;
-                other._kvs= nullptr;
+                other._keys= nullptr;
                 other._stats= nullptr;
                 other.shutdown();
             } else {
                 internal_rehash(other._cap); // reserves a table
                 for (size_type ix = 0; ix < capacity(); ++ix) {
-                    ::new (_kvs+ix, microc_new::blah)
-                                value_type(microc::traits::move(other._kvs[ix]));
+                    ::new (_keys + ix, microc_new::blah)
+                                value_type(microc::traits::move(other._keys[ix]));
                     _stats[ix] = other._stats[ix];
                 }
                 _size = other._size;
                 other.shutdown();
             }
         }
-        array_map_robin(array_map_robin && other) noexcept :
-                array_map_robin(microc::traits::move(other), other.get_allocator()) {}
-        ~array_map_robin() { shutdown(); }
+        array_set_robin(array_set_robin && other) noexcept :
+                array_set_robin(microc::traits::move(other), other.get_allocator()) {}
+        ~array_set_robin() { shutdown(); }
 
-        array_map_robin & operator=(const array_map_robin & other) {
+        array_set_robin & operator=(const array_set_robin & other) {
             if(this==&other) return *this;
             _max_load_factor = other.max_load_factor();
             clear();
             internal_rehash(other.capacity());
             for (size_type ix = 0; ix < capacity(); ++ix) {
-                ::new (_kvs+ix, microc_new::blah) value_type(other._kvs[ix]);
+                ::new (_keys + ix, microc_new::blah) value_type(other._keys[ix]);
                 _stats[ix] = other._stats[ix];
             }
             _size = other._size;
             return *this;
         }
-        array_map_robin & operator=(array_map_robin && other) noexcept {
+        array_set_robin & operator=(array_set_robin && other) noexcept {
             if(this==&(other)) return *this;
-            const bool are_equal_allocators = _alloc_kv == other.get_allocator();
+            const bool are_equal_allocators = _alloc_keys == other.get_allocator();
             _max_load_factor = other._max_load_factor;
             if(are_equal_allocators) {
                 shutdown();
                 _cap=other._cap;
                 _size = other._size;
-                _kvs = other._kvs;
+                _keys = other._keys;
                 _stats = other._stats;
                 other._size=0;
                 other._cap=0;
-                other._kvs= nullptr;
+                other._keys= nullptr;
                 other._stats= nullptr;
             } else {
                 clear();
                 rehash(other.capacity()); // reserves a table
                 for (size_type ix = 0; ix < capacity(); ++ix) {
-                    ::new (_kvs+ix, microc_new::blah)
-                            value_type(microc::traits::move(other._kvs[ix]));
+                    ::new (_keys + ix, microc_new::blah)
+                            value_type(microc::traits::move(other._keys[ix]));
                     _stats[ix] = other._stats[ix];
                 }
                 _size = other._size;
@@ -335,7 +329,7 @@ namespace microc {
             return *this;
         }
 
-        Allocator get_allocator() const { return Allocator(_alloc_kv); }
+        Allocator get_allocator() const { return Allocator(_alloc_keys); }
         hasher hash_function() const { return _hasher; }
 
         // capacity
@@ -354,43 +348,18 @@ namespace microc {
             return find(key)!=end();
         }
 
-        // element access
-        T& at(const Key& key) {
-            auto iter = find(key);
-    #ifdef MICRO_CONTAINERS_ENABLE_THROW
-            if(iter==end()) throw throw_hash_map_out_of_range();
-    #endif
-            return iter->second;
-        }
-        const T& at(const Key& key) const {
-            auto iter = find(key);
-    #ifdef MICRO_CONTAINERS_ENABLE_THROW
-            if(iter==end()) throw throw_hash_map_out_of_range();
-    #endif
-            return iter->second;
-        }
-        T & operator[](const Key & key) {
-            auto iter = insert(value_type(key, T())).first;
-            return iter->second;
-        }
-        T & operator[](Key && key) {
-            auto iter = insert(value_type(microc::traits::move(key),
-                                          T())).first;
-            return iter->second;
-        }
-
         // Modifiers
         void shutdown() {
             clear();
-            if(_kvs) _alloc_kv.deallocate(_kvs);
+            if(_keys) _alloc_keys.deallocate(_keys);
             if(_stats) _alloc_status.deallocate(_stats);
             // reset values
-            _kvs=nullptr; _stats= nullptr; _cap=0;
+            _keys=nullptr; _stats= nullptr; _cap=0;
         }
         void clear() noexcept {
             // destroy items
             for (size_type ix = 0; ix < capacity(); ++ix) {
-                _kvs[ix].~value_type();
+                _keys[ix].~value_type();
                 _stats[ix] = FREE;
             }
             _size=0;
@@ -398,34 +367,32 @@ namespace microc {
 
     private:
         template<class VV>
-        size_type internal_insert(VV && kv) {
+        size_type internal_insert(VV && key) {
             if(requires_rehash()) {
                 rehash(_cap<<1);
             }
-            auto & key = kv.first;
-            auto & value = kv.second;
             auto start = k2p(key);
             size_type base_dist=0;
             // first iterations to find a spot
             for (size_type step = 0; step < capacity(); ++step) {
                 const auto pos = mod(start + step); // modulo
-                if (is_free(pos)) { // free item, let's conquer
-                    // put the item
-                    ::new(_kvs + pos, microc_new::blah) value_type(microc::traits::forward<VV>(kv));
+                if (is_free(pos)) { // free item_key, let's conquer
+                    // put the item_key
+                    ::new(_keys + pos, microc_new::blah) value_type(microc::traits::forward<VV>(key));
                     _stats[pos] = USED;
                     ++_size;
                     return pos;
                 }
-                auto & item = kv_of(pos);
-                if (item.first == key) { // found, let's return value
-                    // item = microc::traits::forward<VV>(kv);
+                auto & item_key = key_of(pos);
+                if (item_key == key) { // found, let's return value
+                    // item_key = microc::traits::forward<VV>(k);
                     return pos;
                 }
-                base_dist = distance_to_home_of(item.first, pos);
+                base_dist = distance_to_home_of(item_key, pos);
                 if (base_dist < step) { // let's robin hood
                     // swap
-                    value_type next_displaced_item = microc::traits::move(item);
-                    item = microc::traits::forward<VV>(kv);
+                    value_type next_displaced_item = microc::traits::move(item_key);
+                    item_key = microc::traits::forward<VV>(key);
                     start = pos;
                     ++_size;
 
@@ -435,21 +402,21 @@ namespace microc {
                         has_pending_displace=false;
                         for (size_type step2 = 1; step2 < capacity(); ++step2) {
                             const auto pos2 = mod(start + step2); // modulo
-                            value_type & item2 = _kvs[pos2];
-                            if (is_free(pos2)) { // free item, let's conquer
-                                // now item was copied, he has linked-list info but his
+                            value_type & item2_key = key_of(pos2);
+                            if (is_free(pos2)) { // free item_key, let's conquer
+                                // now item_key was copied, he has linked-list info but his
                                 // pred/succ do not point to him, so let's fix it
-                                item2 = microc::traits::move(next_displaced_item);
+                                item2_key = microc::traits::move(next_displaced_item);
                                 _stats[pos2] = USED;
                                 return pos;
                             }
-                            size_type item_dist = distance_to_home_of(item2.first, pos2);
+                            size_type item_dist = distance_to_home_of(item2_key, pos2);
                             if (item_dist < base_dist+step2) { // let's robin hood
-                                // before all, current displaced item might have wanted to move
+                                // before all, current displaced item_key might have wanted to move
                                 // to one of its siblings(prev/next), so make a copy and update them.
                                 auto temp = microc::traits::move(next_displaced_item);
-                                ::new(&next_displaced_item) value_type(microc::traits::move(item2));
-                                item2 = microc::traits::move(temp);
+                                ::new(&next_displaced_item) value_type(microc::traits::move(item2_key));
+                                item2_key = microc::traits::move(temp);
                                 // prepare for next iteration
                                 base_dist = item_dist;
                                 start = pos2;
@@ -494,35 +461,33 @@ namespace microc {
             InputIt current(first);
             while(current!=last) { insert(*current); ++current; }
         }
-        template<class KK, class TT, typename AA = match_t<KK, Key>, typename BB = match_t<TT, T>>
-        pair<iterator, bool> insert(KK && key, TT && value) {
-            return insert(value_type(microc::traits::forward<KK>(key),
-                                     microc::traits::forward<TT>(value)));
-        }
 
     private:
-        size_type internal_erase(const Key & key) {
+        size_type internal_erase_by_key(const Key & key) {
+            auto start = internal_pos_of(key);
+            return internal_erase_by_index(start);
+        }
+        size_type internal_erase_by_index(size_type start) {
             // returns pos of deleted index, or capacity()
             const auto cap = capacity();
-            auto start = internal_pos_of(key);
             if(start==cap) return cap;
             //
-            (_kvs+start)->~value_type(); // destruct
+            (_keys + start)->~value_type(); // destruct
             _stats[start] = FREE; // free
             --_size;
             // begin back shifting procedure
             for (size_type step = 1; step < cap; ++step) {
                 auto pos = mod(start + step); // modulo
-                // we are done when the item in question is free or it's distance
+                // we are done when the item_key in question is free or it's distance
                 // from home is 0
                 if(is_free(pos)) return start;
-                value_type & item = _kvs[pos];
-                if(distance_to_home_of(item.first, pos) == 0) return start;
+                value_type & item_key = key_of(pos);
+                if(distance_to_home_of(item_key, pos) == 0) return start;
                 // other-wise, we need to move it left because it's left sibling is empty
                 const auto pos_predecessor = mod(start + step - 1); // modulo
-                // move-construct the item to predecessor place, which is free and destructed
-                ::new (_kvs+pos_predecessor) value_type(microc::traits::move(item));
-                // we don't need to destruct the moved item because it was moved, but
+                // move-construct the item_key to predecessor place, which is free and destructed
+                ::new (_keys + pos_predecessor) value_type(microc::traits::move(item_key));
+                // we don't need to destruct the moved item_key because it was moved, but
                 // we need to update the stats
                 _stats[pos_predecessor] = USED;
                 _stats[pos] = FREE;
@@ -530,18 +495,18 @@ namespace microc {
             return start;
         }
 
-        iterator internal_erase_return_iterator(const Key & key) {
-            size_type pos = internal_erase(key);
+        iterator internal_erase_by_key_return_iterator(const Key & key) {
+            size_type pos = internal_erase_by_key(key);
             return iterator(internal_next_used(pos), this);
         }
     public:
 
         size_type erase(const Key& key) {
-            auto pos = internal_erase(key);
+            auto pos = internal_erase_by_key(key);
             return pos==capacity() ? 0 : 1;
         }
-        iterator erase(iterator pos) { return internal_erase_return_iterator(pos->first); }
-        iterator erase(const_iterator pos) { return internal_erase_return_iterator(pos->first); }
+        iterator erase(iterator pos) { return internal_erase_by_key_return_iterator(*pos); }
+        iterator erase(const_iterator pos) { return internal_erase_by_key_return_iterator(*pos); }
         iterator erase(const_iterator first, const_iterator last) {
             const_iterator current(first);
             while (current!=last and current!=end()) current=erase(current);
@@ -571,8 +536,7 @@ namespace microc {
 
             if(order==MICROC_PRINT_USED) {
                 for (const value_type & item : *this) {
-                    std::cout << "{ k: " << std::to_string(item.first) << ", v: "
-                            << std::to_string(item.second) << " },\n";
+                    std::cout << "{ k: " << std::to_string(item) << " },\n";
                 }
             }
             else {
@@ -580,8 +544,8 @@ namespace microc {
                     if(is_free(ix)) {
                         std::cout << ix << " = FREE, \n";
                     } else {
-                        std::cout << ix << " = { k: " << std::to_string(_kvs[ix].first)
-                        << ", v: " << std::to_string(_kvs[ix].second) << " },\n";
+                        std::cout << ix << " = { k: " << std::to_string(_keys[ix])
+                                  << " },\n";
                     }
                 }
             }
@@ -591,10 +555,10 @@ namespace microc {
     };
 
     template<class Key, class T, class Hash, class Allocator>
-    bool operator==(const array_map_robin<Key, T, Hash, Allocator>& lhs,
-                    const array_map_robin<Key, T, Hash, Allocator>& rhs ) {
+    bool operator==(const array_set_robin<Key, Hash, Allocator>& lhs,
+                    const array_set_robin<Key, Hash, Allocator>& rhs ) {
         if(!(lhs.size()==rhs.size())) return false;
-        using size_type = typename array_map_robin<Key, T, Hash, Allocator>::size_type;
+        using size_type = typename array_set_robin<Key, Hash, Allocator>::size_type;
         for (size_type ix = 0; ix < lhs.size(); ++ix)
             if(!(lhs[ix]==rhs[ix])) return false;
         return true;

@@ -6,7 +6,7 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 
 ## Introduction
 #### Sequence Containers
-* string/string_view, u8string/u8string_view, u16string/u16string_view, 32string/32string_view, basic_string/basic_string_view
+* string/string_view, u8-16-32-string/view, basic_string/basic_string_view
 * array
 * static_array
 * dynamic_array
@@ -22,6 +22,8 @@ Check out our website at [micro-gl.github.io/docs/micro-containers/](micro-gl.gi
 #### Unordered Associative
 - hash_map
 - hash_set
+- array_map_robin -> Robin Hood Linear Probing
+- array_map_probing -> Classic Linear Probing
 
 #### Multi Sequence Containers
 - chunker

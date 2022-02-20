@@ -192,6 +192,7 @@ namespace microc {
 
     private:
         void internal_rehash(size_type new_cap) {
+            if(new_cap<_size) return;
             // new_cap is a power of 2
             const size_type old_cap = _cap;
             if(new_cap == old_cap || new_cap == 0) return;
