@@ -102,12 +102,12 @@ namespace microc {
             return capacity();
         }
         inline int k2p(const Key & key) const {
-            // when size is power of 2, we can get modulo with
+            // when size is power of 2, we can get_or_put modulo with
             // bit-wise operation
             return mod(_hasher(key));
         }
         inline int mod(size_type idx) const {
-            // when size is power of 2, we can get modulo with
+            // when size is power of 2, we can get_or_put modulo with
             // bit-wise operation
             return ( idx & (_cap-1));
         }

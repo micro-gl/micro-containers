@@ -23,7 +23,7 @@ void test_insert() {
     std::cout << "\n- vec.insert(it, 2, 300) \n";
     print_simple_container(vec);
 
-    // "it" no longer valid, get a new one:
+    // "it" no longer valid, get_or_put a new one:
     it = vec.begin();
 
     c vec2(2, 400);
