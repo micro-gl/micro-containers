@@ -130,7 +130,7 @@ namespace microc {
         node_query internal_node_predecessor(const node_t * node, size_type bi) const {
             node = node ? node->prev : node;
             while(node==nullptr && bi>0) {
-                bi-=1; // prev bucket
+                --bi; // prev bucket
                 node=_buckets[bi].tail(); // try tail
             } // if _n==nullptr, this is end signal
             if(node==nullptr) bi=bucket_count(); // make it wrap to end
@@ -139,7 +139,7 @@ namespace microc {
         node_query internal_node_successor(const node_t * node, size_type bi) const {
             node= node ? node->next : node;
             while(node==nullptr && bi<bucket_count()) {
-                bi+=1; // next bucket
+                ++bi; // next bucket
                 node = bi<bucket_count() ? _buckets[bi].list : nullptr; // try head
             } // if _n==nullptr, this is end signal
             return node_query(node, bi);

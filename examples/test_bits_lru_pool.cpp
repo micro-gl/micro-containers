@@ -11,12 +11,18 @@ void test_cache_linear_probe() {
     pool.print();
 
     for (int ix = 0; ix < 15*2; ++ix) {
-        pool.get(ix);
+        pool.get_or_put(ix);
         pool.print();
     }
     pool.print();
-    pool.get(28);
+    pool.get_or_put(28);
     pool.print();
+
+    // test iterator
+    std::cout << std::endl;
+    for (auto kv : pool) {
+        std::cout << "{ k: " << kv.key << ", v: " << kv.value << " },\n";
+    }
 
     return;
 
@@ -88,6 +94,13 @@ void test_cache_robin_hood() {
     pool.print();
     pool.remove(13);
     pool.print();
+
+    // test iterator
+    std::cout << std::endl;
+    for (auto kv : pool) {
+        std::cout << "{ k: " << kv.key << ", v: " << kv.value << " },\n";
+    }
+
     pool.clear();
     pool.print();
 
@@ -96,6 +109,7 @@ void test_cache_robin_hood() {
 
 using namespace std;
 int main() {
-    test_cache_robin_hood();
+//    test_cache_robin_hood();
+    test_cache_linear_probe();
 }
 
