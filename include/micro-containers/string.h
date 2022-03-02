@@ -710,7 +710,7 @@ namespace microc {
         }
 
         void clear() noexcept {
-//            for (size_type ix = 0; ix < size(); ++ix) _data[ix].~value_type();
+//            for (size_type ix = 0; ix < size(); ++ix) _data[ix].~iter_value_type();
             // we assume CharT is non-allocating structure
             _current = 0;
             write_null_termination_at_end();

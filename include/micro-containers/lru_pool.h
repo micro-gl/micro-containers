@@ -23,11 +23,13 @@ namespace microc {
 #include <iostream>
 #endif
     /**
-     * LRU object Cache with constrained bits:
+     * LRU object Pool with constrained bits:
      * 1. size is upto 10 bits = 1024 for 32 bits keys
      * 2. size is upto 21 bits = 2,097,152 for 64 bits keys
      * 3. compact lookup and is perfect for CPU cache
-     * This uses a hash table with robin hood probing and in-place linked-list,
+     * 4. Objects can be constructed at init time, and are never destructed (but rather reused), unless the pool is destructed
+     * 5. You can also defer construction to a later time.
+     * This uses a hash table with robin hood probing and in-place linked-list, that fits in a machine word.
      * and is very conservative with memory, which allows CPU caches to load many entries at once.
      *
      * NOTES:
@@ -43,18 +45,18 @@ namespace microc {
      */
     template<class object_type, int size_bits=10,
             class machine_word=long, class Allocator=void>
-    class lru_cache {
+    class lru_pool {
     private:
         using pool_t = bits_robin_lru_pool<size_bits, machine_word, Allocator>;
         using _pool_iter = typename pool_t::const_iterator;
 
-        template<class value_type> struct iterator_t {
-            const lru_cache * _c; // container
+        template<class iter_value_type> struct iterator_t {
+            const lru_pool * _c; // container
             _pool_iter _i; // index
 
-            static lru_cache * ncn(const lru_cache * node)
-            { return const_cast<lru_cache *>(node); }
-            iterator_t(_pool_iter i, const lru_cache * c) : _i(i), _c(c) {}
+            static lru_pool * ncn(const lru_pool * node)
+            { return const_cast<lru_pool *>(node); }
+            iterator_t(_pool_iter i, const lru_pool * c) : _i(i), _c(c) {}
             template<class value_type_t>
             iterator_t(const iterator_t<value_type_t> & o) : iterator_t(o._i, o._c) {}
             iterator_t& operator++() {
@@ -74,7 +76,7 @@ namespace microc {
             iterator_t operator--(int) { iterator_t ret(_i, _c); --(*this); return ret; }
             bool operator==(iterator_t o) const { return _i==o._i; }
             bool operator!=(iterator_t o) const { return !(*this==o); }
-            value_type operator*() const {
+            iter_value_type operator*() const {
                 const auto kv = *_i;
                 return { kv.key, ncn(_c)->_items[kv.value] };
             }
@@ -100,68 +102,67 @@ namespace microc {
         pool_t _pool;
         value_type * _items;
         val_alloc _allocator;
+        bool _are_items_constructed;
 
     public:
-        explicit lru_cache(float load_factor=0.5f,
-                           const allocator_type & allocator = allocator_type()) :
-                    _pool(load_factor, allocator), _allocator(allocator), _items(nullptr) {
+        struct result_type {
+            object_type & object;
+            // is the object the match we wanted or a new object from the pool.
+            // If it is active, we can use it as is. If it is not, we need to
+            // reconfigure it to use it.
+            bool is_active;
+        };
+
+        template<class ...Args>
+        explicit lru_pool(float load_factor=0.5f,
+                 const allocator_type & allocator = allocator_type(),
+                 Args && ...args) :
+                 _pool(load_factor, allocator), _allocator(allocator), _items(nullptr),
+                 _are_items_constructed(false) {
+            _items = _allocator.allocate(_pool.capacity());
+            construct(microc::traits::forward<Args>(args)...);
+        }
+        explicit lru_pool(float load_factor=0.5f,
+                          const allocator_type & allocator = allocator_type()) :
+                          _pool(load_factor, allocator), _allocator(allocator), _items(nullptr),
+                          _are_items_constructed(false) {
             _items = _allocator.allocate(_pool.capacity());
         }
-        ~lru_cache() {
+
+        ~lru_pool() {
             clear();
+            destruct();
             _allocator.deallocate(_items);
             _items=nullptr;
         }
 
         allocator_type get_allocator() { return _allocator; }
-
         constexpr int capacity() const { return _pool.capacity(); }
         int size() const { return _pool.size(); }
         int maxSize() const { return _pool.maxSize(); }
         void print(char order=1, int how_many=-1) { _pool.print(order, how_many); }
 
         bool has(machine_word key) const { return _pool.has(key); }
-        value_type * get(machine_word key) {
-            int val = _pool.get(key);
-            return val==-1 ? nullptr : (_items + val);
-        }
-
-    private:
-        template<class VV>
-        void internal_put(machine_word key, VV && value) {
+        result_type get(machine_word key) {
             const auto q = _pool.get_or_put(key);
-            auto * val_mem = _items + q.value;
-            if(q.is_active) // if active, copy/move assign with forward
-                *(val_mem) = microc::traits::forward<VV>(value);
-            else // if free, copy/move-construct with emplace-new forward
-                ::new(val_mem, microc_new::blah) value_type(microc::traits::forward<VV>(value));
-            // now, if the lazy LRU policy removed one place, let's destruct it
-            if(q.removed_value!=-1)
-                (_items + q.removed_value)->~value_type();
+            return { _items[q.value], q.is_active };
+        }
+        void destruct() {
+            if(!_are_items_constructed) return;
+            for (int ix = 0; ix < capacity(); ++ix)
+                (_items + ix)->~value_type();
+            _are_items_constructed=false;
         }
 
-    public:
-        void put(machine_word key, const value_type & value) {
-            internal_put(key, value);
+        template<class ...Args>
+        void construct(Args && ...args) {
+            if(_are_items_constructed) destruct();
+            for (int ix = 0; ix < capacity(); ++ix)
+                ::new(_items + ix, microc_new::blah) value_type(microc::traits::forward<Args>(args)...);
+            _are_items_constructed=true;
         }
-        void put(machine_word key, value_type && value) {
-            internal_put(key, microc::traits::move(value));
-        }
-
-        bool remove(machine_word key) {
-            int val = _pool.remove(key);
-            if(val==-1) return true;
-            // let's destruct the free item
-            (_items + val)->~value_type();
-            return true;
-        }
-
         void clear() {
-            // iterate all pool values for indices and destruct
-            // active items
-            for (auto kv : _pool)
-                (_items + kv.value)->~value_type();
-            // clear all active values
+            // clear/reset all active values
             _pool.clear();
         }
     };

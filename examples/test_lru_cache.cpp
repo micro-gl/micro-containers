@@ -34,8 +34,8 @@ void test_iterator() {
 
     const auto & const_ref = cache;
 
-//    for (auto kv : const_ref) {
-    for (auto kv : cache) {
+    for (auto kv : const_ref) {
+//    for (auto kv : cache) {
         std::cout << "{ k: " << kv.key << ", v: " << to_string(kv.value) << " },\n";
     }
 }

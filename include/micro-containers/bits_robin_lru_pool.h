@@ -79,7 +79,7 @@ namespace microc {
         struct result_type {
             // the value that was chosen
             int value;
-            // the LRU item value that was removed (not a key)
+            // the LRU item value that became free (not a key, but a value)
             int removed_value;
             // inserted key was active or free ?
             bool is_active;
@@ -108,8 +108,9 @@ namespace microc {
                 return *this;
             }
             iterator_t operator+(int val) {
-                for (int ix = 0; ix < val; ++ix) ++(*this);
-                return iterator_t(_i, _c);
+                iterator_t temp(*this);
+                for (int ix = 0; ix < val; ++ix) ++temp;
+                return temp;
             }
             iterator_t operator++(int) { iterator_t ret(_i, _c); ++(*this); return ret; }
             iterator_t operator--(int) { iterator_t ret(_i, _c); --(*this); return ret; }

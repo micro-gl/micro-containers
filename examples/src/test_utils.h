@@ -11,6 +11,8 @@ using std::to_string;
 struct dummy_t {
     int a, b;
 
+    dummy_t(int aa, int bb) : a(aa), b(bb) {}
+
     ~dummy_t() {
         std::cout << "destructed !!\n";
     }
