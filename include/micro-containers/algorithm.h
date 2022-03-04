@@ -50,6 +50,7 @@ namespace microc {
                 largest = ri;
             if (largest != i)
             {
+                // todo: use move swaps instead
                 const auto temp = first[largest];
                 first[largest] = first[i];
                 first[i] = temp;
@@ -89,6 +90,7 @@ namespace microc {
         auto i = size-1;
         // bubble up the item
         while ((i>0) && c(first[__heap_parent_of(i)], first[i])) {
+            // todo: use move swap instead
             const auto temp = first[i];
             first[i] = first[__heap_parent_of(i)];
             first[__heap_parent_of(i)] = temp;
@@ -111,6 +113,7 @@ namespace microc {
         // Swaps the value in the position first and the value in the position last-1 and make it a heap.
         if(first==last) return;
         auto size = last-first;
+        // todo: move swap
         const auto temp = first[0];
         first[0] = first[size-1];
         first[size-1] = temp;
@@ -146,6 +149,7 @@ namespace microc {
         auto size = last-first;
         // unsigned count down to 1 included
         for (microc::size_t ix = size-1; ix!=0 ; --ix) {
+            // todo: move swap
             const auto temp = first[ix];
             first[ix] = first[0];
             first[0] = temp;

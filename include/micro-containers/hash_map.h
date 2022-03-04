@@ -130,7 +130,7 @@ namespace microc {
         node_query internal_node_predecessor(const node_t * node, size_type bi) const {
             node = node ? node->prev : node;
             while(node==nullptr && bi>0) {
-                bi-=1; // prev bucket
+                --bi; // prev bucket
                 node=_buckets[bi].tail(); // try tail
             } // if _n==nullptr, this is end signal
             if(node==nullptr) bi=bucket_count(); // make it wrap to end
@@ -139,7 +139,7 @@ namespace microc {
         node_query internal_node_successor(const node_t * node, size_type bi) const {
             node= node ? node->next : node;
             while(node==nullptr && bi<bucket_count()) {
-                bi+=1; // next bucket
+                ++bi; // next bucket
                 node = bi<bucket_count() ? _buckets[bi].list : nullptr; // try head
             } // if _n==nullptr, this is end signal
             return node_query(node, bi);
@@ -313,7 +313,8 @@ namespace microc {
             // destruct and deallocate old bucket
             for (size_type ix = 0; ix < old_buckets_count; ++ix)
                 old_buckets[ix].~bucket_t();
-            _alloc_bucket.deallocate(old_buckets);
+            if(old_buckets)
+                _alloc_bucket.deallocate(old_buckets);
             // assign new bucket info
             _buckets = new_buckets;
             _bucket_count = new_buckets_count;
@@ -364,12 +365,12 @@ namespace microc {
                 rehash(other._bucket_count); // reserves a table
                 for(auto & item : other)
                     insert(microc::traits::move(item));
-                other.clear();
+                other.shutdown();
             }
         }
         hash_map(hash_map && other) noexcept :
                 hash_map(microc::traits::move(other), other.get_allocator()) {}
-        ~hash_map() { clear(); }
+        ~hash_map() { shutdown(); }
 
         hash_map & operator=(const hash_map & other) {
             if(this==&other) return *this;
@@ -381,10 +382,10 @@ namespace microc {
         }
         hash_map & operator=(hash_map && other) noexcept {
             if(this==&(other)) return *this;
-            clear();
             const bool are_equal_allocators = _alloc_node == other.get_allocator();
             _max_load_factor = other._max_load_factor;
             if(are_equal_allocators) {
+                shutdown();
                 _bucket_count=other._bucket_count;
                 _buckets = other._buckets;
                 _size = other._size;
@@ -392,10 +393,11 @@ namespace microc {
                 other._bucket_count=0;
                 other._size=0;
             } else {
+                clear();
                 rehash(other._bucket_count); // reserves a table
                 for(auto & item : other)
                     insert(microc::traits::move(item));
-                other.clear();
+                other.shutdown();
             }
             return *this;
         }
@@ -451,6 +453,15 @@ namespace microc {
             return iter->second;
         }
 
+        void shutdown() {
+            // destroy nodes and buckets
+            clear();
+            // destroy buckets and deallocate, this is useless, trivial destructor
+            for (size_type ix = 0; ix < _bucket_count; ++ix) _buckets[ix].~bucket_t();
+            if(_buckets) _alloc_bucket.deallocate(_buckets);
+            // reset values
+            _buckets=nullptr; _bucket_count=0;
+        }
         // Modifiers
         void clear() noexcept {
             const auto bucket_count = _bucket_count;
@@ -468,11 +479,7 @@ namespace microc {
                     _alloc_node.deallocate(removed_node);
                 }
             }
-            // destroy buckets and deallocate, this is useless, trivial destructor
-            for (size_type ix = 0; ix < bucket_count; ++ix) _buckets[ix].~bucket_t();
-            _alloc_bucket.deallocate(_buckets);
-            // reset values
-            _buckets=nullptr; _bucket_count=_size=0;
+            _size=0;
         }
 
         pair<iterator, bool> insert(const value_type& value) {
@@ -495,6 +502,7 @@ namespace microc {
             node_query q = internal_insert_node(node);
             return pair<iterator, bool>(iterator(q.node, q.bucket_index, this), true);
         }
+
     private:
         template<class A, class B>
         using match_t = microc::traits::enable_if_t<
@@ -504,6 +512,7 @@ namespace microc {
         using non_match_t = microc::traits::enable_if_t<
                 !microc::traits::is_same<A,
                         microc::traits::remove_reference_t<B>>::value, bool>;
+
     public:
         template<class InputIt, typename Non_Key = non_match_t<Key, InputIt>>
         void insert(InputIt first, InputIt last) {

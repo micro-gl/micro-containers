@@ -21,6 +21,13 @@ set(SOURCES
         test_dictionary.cpp
         test_ordered_set.cpp
         test_hash_map.cpp
+        test_array_map_robin.cpp
+        test_array_map_probing.cpp
+        test_array_set_robin.cpp
+        test_array_set_probing.cpp
+        test_bits_lru_pool.cpp
+        test_lru_cache.cpp
+        test_lru_pool.cpp
         test_hash_set.cpp
         test_array.cpp
         test_static_array.cpp
@@ -32,6 +39,7 @@ set(SOURCES
         test_priority_queue.cpp
         test_buffer.cpp
         test_string.cpp
+        test_murmur.cpp
         )
 
 set(SOURCES_SHARED "" src/test_utils.h)

@@ -212,10 +212,10 @@ namespace microc {
                 bool has_left = root->left != nullptr;
                 bool has_right = root->right != nullptr;
                 // if _root item is before me, then he might be a candidate,
-                // let's store it, and try to get better
+                // let's store it, and try to get_or_put better
                 if (!isPreceding(key, root->item)) {
                     candidate = root;
-                    // let's try to get a bigger lower bound
+                    // let's try to get_or_put a bigger lower bound
                     if (has_right) root = root->right;
                     else break;
                 } else {
@@ -232,10 +232,10 @@ namespace microc {
                 bool has_left = root->left != nullptr;
                 bool has_right = root->right != nullptr;
                 // if _root item is before me, then he might be a candidate,
-                // let's store it, and try to get better
+                // let's store it, and try to get_or_put better
                 if (isPreceding(key, root->item)) {
                     candidate = root;
-                    // let's try to get a bigger lower bound
+                    // let's try to get_or_put a bigger lower bound
                     if (has_left) root = root->left;
                     else break;
                 } else {

@@ -30,13 +30,17 @@ namespace microc {
                 second(microc::traits::forward<U2>(y)) {
 
         };
-        pair(const pair& p) = default;
-        pair(pair&& p)  noexcept = default;
+        pair(const pair& p) : first(p.first), second(p.second) {};
+        pair(pair&& p)  noexcept : first(microc::traits::move(p.first)), second(microc::traits::move(p.second)) {};
         pair& operator=(const pair& other) {
             first = other.first;
             second = other.second;
             return *this;
         }
-        pair& operator=(pair&& other) noexcept=default;
+        pair& operator=(pair&& o) noexcept {
+            first = microc::traits::move(o.first);
+            second = microc::traits::move(o.second);
+            return *this;
+        };
     };
 }

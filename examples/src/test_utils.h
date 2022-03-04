@@ -10,8 +10,11 @@ using std::to_string;
 
 struct dummy_t {
     int a, b;
-    explicit dummy_t(int $a=0, int $b=1) : a($a), b($b) {
-        int aa;
+
+    dummy_t(int aa, int bb) : a(aa), b(bb) {}
+
+    ~dummy_t() {
+        std::cout << "destructed !!\n";
     }
     bool operator<(const dummy_t& rhs) const {
         return (a < rhs.a) || (a==rhs.a && b<rhs.b);
