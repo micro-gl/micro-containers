@@ -39,6 +39,7 @@ set(SOURCES
         test_priority_queue.cpp
         test_buffer.cpp
         test_string.cpp
+        test_murmur.cpp
         )
 
 set(SOURCES_SHARED "" src/test_utils.h)
