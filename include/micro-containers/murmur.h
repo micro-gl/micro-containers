@@ -12,9 +12,21 @@
 
 namespace microc {
 
+    /**
+     * Iterative murmur2A Hash function, both for 32 and 64 bit machines.
+     * - Start with a seed at constructor
+     * - Feed words iteratively with the next() method
+     * - Finish with end() method to get the result
+     * - This takes into account the length of the sequence, so NULL keys
+     * @tparam machine_word should be unsigned integer or long (32 bit or 64 bit wide word)
+     */
     template<class machine_word>
     struct iterative_murmur {
     private:
+        template<class T1, class T2>
+        struct is_same { constexpr static bool value = false; };
+        template<class T> struct is_same<T, T> { constexpr static bool value = true; };
+
         using mw = machine_word;
         static constexpr char _bits_ = sizeof(mw)<<3;
         static constexpr int r = _bits_==32 ? 24 : 47;
@@ -26,7 +38,11 @@ namespace microc {
     public:
         explicit iterative_murmur(machine_word seed) : _state(seed), _len(0) {
             constexpr bool _32_or_64 = sizeof(mw)==4 or sizeof(mw)==8;
+            constexpr bool _is_unsigned = is_same<mw, unsigned long long>::value or
+                            is_same<mw, unsigned long>::value or
+                            is_same<mw, unsigned int>::value;
             static_assert(_32_or_64, "machine-word must be 32 or 64 bit");
+            static_assert(_is_unsigned, "machine-word must be unsigned");
         }
 
         void next(machine_word payload) {
@@ -39,7 +55,6 @@ namespace microc {
         }
 
     private:
-
         template<char bits>
         inline void _next(machine_word payload) {}
         template<char bits>
@@ -70,7 +85,6 @@ namespace microc {
             _state ^= _state >> r;
             return _state;
         }
-
 #undef mmix
     };
 }
