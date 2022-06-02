@@ -60,7 +60,7 @@ namespace microc {
         explicit dynamic_array(size_type count, const Alloc& alloc = Alloc()) :
                             dynamic_array(count, T(), alloc) {}
         template<class Iterable>
-        explicit dynamic_array(const Iterable &list, const Alloc & alloc= Alloc()) :
+        dynamic_array(const Iterable &list, const Alloc & alloc= Alloc()) :
                 dynamic_array(list.begin(), list.end(), alloc) {}
         template<class InputIt, typename bb = microc::traits::enable_if_t<!microc::traits::is_integral<InputIt>::value>>
         dynamic_array(InputIt first, InputIt last, const Alloc & alloc= Alloc()) :
