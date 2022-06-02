@@ -36,13 +36,17 @@ namespace microc {
 #define mmix(h,k) { (k) *= m; (k) ^= (k) >> r; (k) *= m; (h) *= m; (h) ^= (k); }
 
     public:
-        explicit iterative_murmur(machine_word seed) : _state(seed), _len(0) {
+        explicit iterative_murmur() : _state(0), _len(0) {
             constexpr bool _32_or_64 = sizeof(mw)==4 or sizeof(mw)==8;
             constexpr bool _is_unsigned = is_same<mw, unsigned long long>::value or
-                            is_same<mw, unsigned long>::value or
-                            is_same<mw, unsigned int>::value;
+            is_same<mw, unsigned long>::value or
+            is_same<mw, unsigned int>::value;
             static_assert(_32_or_64, "machine-word must be 32 or 64 bit");
             static_assert(_is_unsigned, "machine-word must be unsigned");
+        }
+
+        void begin(machine_word seed) {
+            _state=seed; _len=0;
         }
 
         void next(machine_word payload) {
