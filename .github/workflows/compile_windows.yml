@@ -1,0 +1,25 @@
+name: windows
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  windows_build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build & Install
+        run: |
+          mkdir cmake-build-release
+          cd cmake-build-release
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --install .
+      - name: Build all examples
+        run: |
+          cd cmake-build-release
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build .
